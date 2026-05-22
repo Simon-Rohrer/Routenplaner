@@ -1,20 +1,81 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Routenplaner - Logistikplaner</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/@leaflet-extras/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+    
+    <!-- Leaflet Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    
+    <link rel="stylesheet" href="../css/routenplaner.css">
 </head>
 <body>
-    <h1>Routenplaner</h1>
+    <div class="container">
+        <h1>🗺️ Routenplaner</h1>
+        
+        <div class="input-section">
+            <div class="form-group">
+                <label for="start">Start-Adresse:</label>
+                <div class="autocomplete-wrapper">
+                    <input type="text" id="start" name="start" placeholder="z.B. Berlin, Deutschland" autocomplete="off">
+                    <ul id="start-suggestions" class="autocomplete-suggestions"></ul>
+                </div>
+                <small id="start-error" class="error"></small>
+            </div>
+            
+            <div class="form-group">
+                <label for="ziel">Ziel-Adresse:</label>
+                <div class="autocomplete-wrapper">
+                    <input type="text" id="ziel" name="ziel" placeholder="z.B. München, Deutschland" autocomplete="off">
+                    <ul id="ziel-suggestions" class="autocomplete-suggestions"></ul>
+                </div>
+                <small id="ziel-error" class="error"></small>
+            </div>
+            
+            <button id="calculate-btn" type="button" class="btn-primary">Route berechnen</button>
+            <button id="clear-btn" type="button" class="btn-secondary">Löschen</button>
+        </div>
+        
+        <div class="results-section" id="results-section" style="display: none;">
+            <div class="results-grid">
+                <div class="result-card distance-card">
+                    <h3>📏 Entfernung</h3>
+                    <div class="distance-display">
+                        <span id="distance">-</span>
+                        <small>km</small>
+                    </div>
+                </div>
+                
+                <div class="result-card">
+                    <h3>⏱️ Fahrzeit</h3>
+                    <p id="duration">-</p>
+                    <p id="route-info" style="font-size: 0.85em; color: #666; margin-top: 8px;"></p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="map"></div>
+    </div>
 
-    <label for="start">Start:</label>
-    <input type="text" id="start" name="start">
-    <br><br>
-    <label for="ziel">Ziel:</label>
-    <input type="text" id="ziel" name="ziel">
-    <br><br>
-    <button type="button">Route berechnen</button>
-    <h1>testnwadfasdfasd</h1>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet Routing Machine JS -->
+    <script src="https://unpkg.com/@leaflet-extras/leaflet-routing-machine/dist/leaflet-routing-machine.umd.js"></script>
+    
+    <!-- Leaflet Geocoder JS -->
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    
+    <!-- Nominatim Geocoder (kostenlos) -->
+    <script src="https://unpkg.com/osm-geocoder@1.0.4/dist/osm-geocoder.umd.js"></script>
+    
+    <script src="../js/routenplaner.js"></script>
 </body>
 </html>
