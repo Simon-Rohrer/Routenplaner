@@ -7,38 +7,132 @@
     const ROUTING_SERVICE_URL = "https://router.project-osrm.org/route/v1";
     const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
 
-    const TRUCKS = [
+    const VEHICLES = [
         {
-            id: "actros",
-            name: "Mercedes-Benz Actros",
-            consumption: 28,
-            description: "effizienter Fernverkehr-LKW",
-            strength: "guter Verbrauch bei hoher Alltagstauglichkeit",
-            speedScore: 7
+            id: "vito",
+            name: "Mercedes-Benz Vito",
+            category: "Transporter",
+            consumption: 8.5,
+            payloadKg: 900,
+            volumeM3: 6,
+            cargoLengthCm: 260,
+            cargoWidthCm: 165,
+            cargoHeightCm: 135,
+            purchaseCost: 42000,
+            maintenancePerYear: 2400,
+            trainingCost: 600,
+            personnelHourlyRate: 28,
+            description: "kleiner Transporter für leichte Pakete und Stadtfahrten",
+            strength: "sehr niedrige Betriebskosten bei kleinen Sendungen",
+            speedScore: 9,
+            annualTrips: 620,
+            depreciationYears: 6,
+            trainingYears: 3
         },
         {
-            id: "man-tgx",
-            name: "MAN TGX",
-            consumption: 30,
-            description: "robuster Standard-LKW",
-            strength: "solide Wahl für vielseitige Lieferstrecken",
-            speedScore: 7
+            id: "sprinter",
+            name: "Mercedes-Benz Sprinter",
+            category: "3,5-t-Kastenwagen",
+            consumption: 10.5,
+            payloadKg: 1200,
+            volumeM3: 14,
+            cargoLengthCm: 430,
+            cargoWidthCm: 178,
+            cargoHeightCm: 194,
+            purchaseCost: 56000,
+            maintenancePerYear: 3200,
+            trainingCost: 750,
+            personnelHourlyRate: 29,
+            description: "flexibler Kastenwagen für Paket- und Palettenlieferungen",
+            strength: "guter Kompromiss aus Nutzlast, Volumen und Verbrauch",
+            speedScore: 8,
+            annualTrips: 580,
+            depreciationYears: 6,
+            trainingYears: 3
         },
         {
-            id: "volvo-fh",
-            name: "Volvo FH",
-            consumption: 27,
-            description: "sparsamer moderner LKW",
-            strength: "niedrigster Verbrauch in der Auswahl",
-            speedScore: 8
+            id: "crafter",
+            name: "Volkswagen Crafter",
+            category: "3,5-t-Kastenwagen",
+            consumption: 10.8,
+            payloadKg: 1300,
+            volumeM3: 16.4,
+            cargoLengthCm: 485,
+            cargoWidthCm: 183,
+            cargoHeightCm: 196,
+            purchaseCost: 59000,
+            maintenancePerYear: 3400,
+            trainingCost: 750,
+            personnelHourlyRate: 29,
+            description: "großer Kastenwagen mit viel Ladevolumen",
+            strength: "mehr Volumen als der Sprinter bei noch moderatem Verbrauch",
+            speedScore: 8,
+            annualTrips: 560,
+            depreciationYears: 6,
+            trainingYears: 3
         },
         {
-            id: "scania-r",
-            name: "Scania R-Serie",
-            consumption: 32,
-            description: "leistungsstarker LKW für schwere Transporte",
-            strength: "starke Leistung, wenn Zeit wichtiger als Kosten ist",
-            speedScore: 10
+            id: "daily-72",
+            name: "Iveco Daily 7,2 t",
+            category: "leichter 7,2-t-LKW",
+            consumption: 15.5,
+            payloadKg: 3500,
+            volumeM3: 28,
+            cargoLengthCm: 610,
+            cargoWidthCm: 220,
+            cargoHeightCm: 230,
+            purchaseCost: 78000,
+            maintenancePerYear: 5200,
+            trainingCost: 1200,
+            personnelHourlyRate: 31,
+            description: "kleiner LKW für schwere Pakete und mehrere Paletten",
+            strength: "viel Nutzlast, ohne direkt einen großen 12-t-LKW einzusetzen",
+            speedScore: 7,
+            annualTrips: 500,
+            depreciationYears: 7,
+            trainingYears: 3
+        },
+        {
+            id: "man-tgl-75",
+            name: "MAN TGL 7,5 t",
+            category: "7,5-t-LKW",
+            consumption: 18,
+            payloadKg: 3000,
+            volumeM3: 35,
+            cargoLengthCm: 720,
+            cargoWidthCm: 245,
+            cargoHeightCm: 240,
+            purchaseCost: 95000,
+            maintenancePerYear: 6500,
+            trainingCost: 1500,
+            personnelHourlyRate: 32,
+            description: "klassischer 7,5-Tonner für größere Touren",
+            strength: "großes Ladevolumen für sperrige Lieferungen",
+            speedScore: 6,
+            annualTrips: 460,
+            depreciationYears: 7,
+            trainingYears: 3
+        },
+        {
+            id: "atego-12",
+            name: "Mercedes-Benz Atego 12 t",
+            category: "12-t-Verteiler-LKW",
+            consumption: 22,
+            payloadKg: 6000,
+            volumeM3: 44,
+            cargoLengthCm: 800,
+            cargoWidthCm: 245,
+            cargoHeightCm: 260,
+            purchaseCost: 125000,
+            maintenancePerYear: 8200,
+            trainingCost: 1800,
+            personnelHourlyRate: 34,
+            description: "größerer Verteiler-LKW für schwere oder voluminöse Sendungen",
+            strength: "Reserve, wenn 7,5 Tonnen nicht mehr reichen",
+            speedScore: 5,
+            annualTrips: 430,
+            depreciationYears: 8,
+            trainingYears: 3
         }
     ];
 
@@ -90,6 +184,11 @@
         elements.startError = document.getElementById("start-error");
         elements.zielError = document.getElementById("ziel-error");
         elements.routeError = document.getElementById("route-error");
+        elements.packageLength = document.getElementById("package-length");
+        elements.packageWidth = document.getElementById("package-width");
+        elements.packageHeight = document.getElementById("package-height");
+        elements.packageWeight = document.getElementById("package-weight");
+        elements.packageQuantity = document.getElementById("package-quantity");
         elements.priority = document.getElementById("priority");
         elements.dieselPrice = document.getElementById("diesel-price");
         elements.truckOptions = document.getElementById("truck-options");
@@ -103,10 +202,18 @@
         elements.routeInfo = document.getElementById("route-info");
         elements.resultTruck = document.getElementById("result-truck");
         elements.resultTruckInfo = document.getElementById("result-truck-info");
+        elements.resultPackage = document.getElementById("result-package");
+        elements.resultLoad = document.getElementById("result-load");
+        elements.summaryRoute = document.getElementById("summary-route");
+        elements.summaryPackage = document.getElementById("summary-package");
+        elements.summaryVehicle = document.getElementById("summary-vehicle");
+        elements.summaryCost = document.getElementById("summary-cost");
         elements.fuelLiters = document.getElementById("fuel-liters");
         elements.fuelInfo = document.getElementById("fuel-info");
         elements.cost = document.getElementById("cost");
         elements.costInfo = document.getElementById("cost-info");
+        elements.bwlCosts = document.getElementById("bwl-costs");
+        elements.bwlBenefits = document.getElementById("bwl-benefits");
         elements.recommendationTitle = document.getElementById("recommendation-title");
         elements.recommendationText = document.getElementById("recommendation-text");
     }
@@ -145,6 +252,15 @@
         });
         elements.priority.addEventListener("change", refreshCostPlanFromCurrentRoute);
         elements.dieselPrice.addEventListener("input", refreshCostPlanFromCurrentRoute);
+        [
+            elements.packageLength,
+            elements.packageWidth,
+            elements.packageHeight,
+            elements.packageWeight,
+            elements.packageQuantity
+        ].forEach(function (input) {
+            input.addEventListener("input", refreshCostPlanFromCurrentRoute);
+        });
 
         elements.startInput.addEventListener("input", function () {
             state.start = null;
@@ -284,6 +400,7 @@
         const startAddress = elements.startInput.value.trim();
         const zielAddress = elements.zielInput.value.trim();
         const dieselPrice = getDieselPrice();
+        const packageData = getPackageData();
 
         clearErrors();
 
@@ -299,7 +416,11 @@
             showRouteError("Bitte einen gültigen Dieselpreis eingeben.");
         }
 
-        if (!startAddress || !zielAddress || !Number.isFinite(dieselPrice) || dieselPrice <= 0) {
+        if (!packageData.isValid) {
+            showRouteError("Bitte gültige Paketmaße, Gewicht und Anzahl eingeben.");
+        }
+
+        if (!startAddress || !zielAddress || !Number.isFinite(dieselPrice) || dieselPrice <= 0 || !packageData.isValid) {
             return;
         }
 
@@ -469,28 +590,41 @@
     }
 
     function showPendingResults() {
+        const packageData = getPackageData();
+
         elements.results.hidden = false;
         elements.distance.textContent = "-";
         elements.duration.textContent = "Wird berechnet";
         elements.routeInfo.textContent = "Routingdaten werden geladen.";
         elements.resultTruck.textContent = getSelectedTruck().name;
-        elements.resultTruckInfo.textContent = "Kosten werden nach der Route berechnet.";
+        elements.resultTruckInfo.textContent = "Fahrzeugvorschlag wird nach Paket- und Routendaten berechnet.";
+        elements.resultPackage.textContent = packageData.isValid ? `${packageData.quantity} Paket(e)` : "-";
+        elements.resultLoad.textContent = packageData.isValid
+            ? `${formatNumber(packageData.totalWeightKg, 1)} kg Gesamtgewicht · ${formatNumber(packageData.totalVolumeM3, 2)} m³ Volumen`
+            : "";
         elements.fuelLiters.textContent = "-";
         elements.fuelInfo.textContent = "";
         elements.cost.textContent = "-";
         elements.costInfo.textContent = "";
-        elements.recommendationTitle.textContent = "KI-Heuristik wird ausgewertet";
-        elements.recommendationText.textContent = "Die Anwendung vergleicht Priorität, Truck-Verbrauch und Streckenlänge.";
+        elements.bwlCosts.innerHTML = "";
+        elements.bwlBenefits.innerHTML = "";
+        elements.summaryRoute.textContent = "Route wird berechnet";
+        elements.summaryPackage.textContent = packageData.isValid ? `${formatNumber(packageData.totalWeightKg, 1)} kg · ${formatNumber(packageData.totalVolumeM3, 2)} m³` : "-";
+        elements.summaryVehicle.textContent = "Wird geprüft";
+        elements.summaryCost.textContent = "-";
+        elements.recommendationTitle.textContent = "Planungslogik wird ausgewertet";
+        elements.recommendationText.textContent = "Der Rechner vergleicht Paketmaße, Gewicht, Fahrzeugkosten und Streckenlänge.";
     }
 
     function renderRouteMetrics(distanceMeters, durationSeconds, sourceLabel) {
         const distanceKm = distanceMeters / 1000;
         const durationMinutes = Math.max(1, Math.round(durationSeconds / 60));
         const averageSpeed = Math.round(distanceKm / (durationSeconds / 3600));
-        const costPlan = calculateCostPlan(distanceKm);
+        const costPlan = calculateCostPlan(distanceKm, durationSeconds);
 
         state.currentResult = {
             distanceKm,
+            durationSeconds,
             routeInfo: `${sourceLabel} mit ca. ${averageSpeed} km/h Durchschnitt.`
         };
 
@@ -504,10 +638,12 @@
 
     function renderFallbackMetrics(start, ziel) {
         const distanceKm = calculateDistance(start, ziel);
-        const costPlan = calculateCostPlan(distanceKm);
+        const estimatedDurationSeconds = distanceKm / 65 * 3600;
+        const costPlan = calculateCostPlan(distanceKm, estimatedDurationSeconds);
 
         state.currentResult = {
             distanceKm,
+            durationSeconds: estimatedDurationSeconds,
             routeInfo: "Luftlinien-Entfernung ohne Fahrzeit."
         };
 
@@ -518,37 +654,61 @@
         renderCostPlan(costPlan);
     }
 
-    // Kostenheuristik für den Schul-Prototyp: Strecke, Verbrauch, Dieselpreis und Priorität.
-    function calculateCostPlan(distanceKm) {
-        const truck = getSelectedTruck();
+    // Planungslogik für den Schul-Prototyp: Paket, Fahrzeugdaten, Strecke und BWL-Kosten.
+    function calculateCostPlan(distanceKm, durationSeconds) {
+        const selectedTruck = getSelectedTruck();
         const priority = getSelectedPriority();
         const dieselPrice = getDieselPrice();
-        const consumedLiters = distanceKm / 100 * truck.consumption;
-        const baseCost = consumedLiters * dieselPrice;
-        const adjustedCost = baseCost * priority.factor;
-        const recommendation = getTruckRecommendation(priority);
+        const packageData = getPackageData();
+        const recommendation = getVehicleRecommendation(priority, packageData);
+        const plannedTruck = recommendation.truck;
+        const consumedLiters = distanceKm / 100 * plannedTruck.consumption;
+        const fuelCost = consumedLiters * dieselPrice * priority.factor;
+        const durationHours = Math.max(durationSeconds / 3600, distanceKm / 70);
+        const bwlCosts = calculateBwlCosts(plannedTruck, durationHours);
+        const totalCost = fuelCost + bwlCosts.total;
+        const benefits = calculateBenefits(priority, plannedTruck, durationHours, totalCost);
 
         return {
-            truck,
+            selectedTruck,
+            plannedTruck,
             priority,
             dieselPrice,
+            packageData,
             distanceKm,
+            durationHours,
             consumedLiters,
-            baseCost,
-            adjustedCost,
+            fuelCost,
+            totalCost,
+            bwlCosts,
+            benefits,
             recommendation
         };
     }
 
     function renderCostPlan(plan) {
-        elements.resultTruck.textContent = plan.truck.name;
-        elements.resultTruckInfo.textContent = `${formatNumber(plan.truck.consumption, 0)} l / 100 km · ${plan.truck.description}`;
+        elements.resultTruck.textContent = plan.plannedTruck.name;
+        elements.resultTruckInfo.textContent = `${plan.plannedTruck.category} · ${formatNumber(plan.plannedTruck.payloadKg, 0)} kg Nutzlast · ${formatNumber(plan.plannedTruck.volumeM3, 1)} m³ · ${formatNumber(plan.plannedTruck.consumption, 1)} l / 100 km`;
+        elements.resultPackage.textContent = `${plan.packageData.quantity} Paket(e)`;
+        elements.resultLoad.textContent = `${formatNumber(plan.packageData.totalWeightKg, 1)} kg Gesamtgewicht · ${formatNumber(plan.packageData.totalVolumeM3, 2)} m³ Volumen · Einzelmaß ${formatNumber(plan.packageData.lengthCm, 0)} × ${formatNumber(plan.packageData.widthCm, 0)} × ${formatNumber(plan.packageData.heightCm, 0)} cm`;
         elements.fuelLiters.textContent = formatNumber(plan.consumedLiters, 1);
-        elements.fuelInfo.textContent = `${formatNumber(plan.distanceKm, 2)} km × ${formatNumber(plan.truck.consumption, 0)} l / 100 km`;
-        elements.cost.textContent = formatCurrency(plan.adjustedCost);
-        elements.costInfo.textContent = `${formatCurrency(plan.baseCost)} Kraftstoffkosten × Faktor ${formatNumber(plan.priority.factor, 2)} (${plan.priority.label}).`;
+        elements.fuelInfo.textContent = `${formatNumber(plan.distanceKm, 2)} km × ${formatNumber(plan.plannedTruck.consumption, 1)} l / 100 km × Faktor ${formatNumber(plan.priority.factor, 2)} (${plan.priority.label})`;
+        elements.cost.textContent = formatCurrency(plan.totalCost);
+        elements.costInfo.textContent = `${formatCurrency(plan.fuelCost)} Kraftstoff + ${formatCurrency(plan.bwlCosts.total)} BWL-Kostenanteile pro Fahrt.`;
+        renderBwlBreakdown(plan);
+        renderSummary(plan);
         elements.recommendationTitle.textContent = `Empfehlung: ${plan.recommendation.truck.name}`;
         elements.recommendationText.textContent = buildRecommendationText(plan);
+    }
+
+    function renderSummary(plan) {
+        const start = elements.startInput.value.trim() || "Start";
+        const ziel = elements.zielInput.value.trim() || "Ziel";
+
+        elements.summaryRoute.textContent = `${start} nach ${ziel}`;
+        elements.summaryPackage.textContent = `${plan.packageData.quantity} Paket(e), ${formatNumber(plan.packageData.totalWeightKg, 1)} kg`;
+        elements.summaryVehicle.textContent = plan.plannedTruck.name;
+        elements.summaryCost.textContent = formatCurrency(plan.totalCost);
     }
 
     function refreshCostPlanFromCurrentRoute() {
@@ -563,26 +723,47 @@
             return;
         }
 
-        const costPlan = calculateCostPlan(state.currentResult.distanceKm);
+        const packageData = getPackageData();
+
+        if (!packageData.isValid) {
+            showRouteError("Bitte gültige Paketmaße, Gewicht und Anzahl eingeben.");
+            return;
+        }
+
+        const costPlan = calculateCostPlan(state.currentResult.distanceKm, state.currentResult.durationSeconds);
         elements.routeInfo.textContent = `${state.currentResult.routeInfo} ${costPlan.priority.routeReason}`;
         renderCostPlan(costPlan);
         clearErrors();
     }
 
     function buildRecommendationText(plan) {
-        const selectedIsRecommended = plan.truck.id === plan.recommendation.truck.id;
+        const selectedIsRecommended = plan.selectedTruck.id === plan.recommendation.truck.id;
         const selectionText = selectedIsRecommended
-            ? "Der ausgewählte Truck passt zur Priorität."
-            : `Ausgewählt ist ${plan.truck.name}; die Heuristik würde ${plan.recommendation.truck.name} empfehlen.`;
+            ? "Das ausgewählte Fahrzeug passt zu Paket und Priorität."
+            : `Ausgewählt ist ${plan.selectedTruck.name}; die Planungslogik würde ${plan.recommendation.truck.name} einsetzen.`;
 
-        return `${selectionText} ${plan.recommendation.reason} Berechnet wurden ${formatNumber(plan.consumedLiters, 1)} Liter Diesel und geschätzte Kosten von ${formatCurrency(plan.adjustedCost)}.`;
+        return `${selectionText} ${plan.recommendation.reason} Für die BWL-Auswertung werden Anschaffung, Wartung, Schulung und Personal anteilig pro Fahrt berücksichtigt. Der geschätzte Gesamtaufwand liegt bei ${formatCurrency(plan.totalCost)}.`;
     }
 
-    function getTruckRecommendation(priority) {
+    function getVehicleRecommendation(priority, packageData) {
+        const fittingVehicles = VEHICLES.filter(function (vehicle) {
+            return canVehicleCarryPackage(vehicle, packageData);
+        });
+        const candidates = fittingVehicles.length ? fittingVehicles : [VEHICLES[VEHICLES.length - 1]];
+
+        if (!fittingVehicles.length) {
+            const truck = VEHICLES[VEHICLES.length - 1];
+
+            return {
+                truck,
+                reason: `Kein Fahrzeug in der Liste passt vollständig zu Gewicht, Volumen oder Einzelmaß. ${truck.name} ist deshalb die größte verfügbare Ausweichlösung.`
+            };
+        }
+
         if (priority === PRIORITIES.schnell) {
-            const truck = TRUCKS.reduce(function (bestTruck, truckItem) {
+            const truck = candidates.reduce(function (bestTruck, truckItem) {
                 return truckItem.speedScore > bestTruck.speedScore ? truckItem : bestTruck;
-            }, TRUCKS[0]);
+            }, candidates[0]);
 
             return {
                 truck,
@@ -591,26 +772,112 @@
         }
 
         if (priority === PRIORITIES.effizient) {
-            const truck = TRUCKS.reduce(function (bestTruck, truckItem) {
-                const truckScore = truckItem.consumption - truckItem.speedScore * 0.35;
-                const bestScore = bestTruck.consumption - bestTruck.speedScore * 0.35;
+            const truck = candidates.reduce(function (bestTruck, truckItem) {
+                const truckScore = getVehicleEfficiencyScore(truckItem, packageData);
+                const bestScore = getVehicleEfficiencyScore(bestTruck, packageData);
                 return truckScore < bestScore ? truckItem : bestTruck;
-            }, TRUCKS[0]);
+            }, candidates[0]);
 
             return {
                 truck,
-                reason: `${truck.name} bietet den besten Kompromiss, weil ${truck.strength}.`
+                reason: `${truck.name} bietet den besten Kompromiss, weil er die Sendung aufnehmen kann und ${truck.strength}.`
             };
         }
 
-        const truck = TRUCKS.reduce(function (bestTruck, truckItem) {
+        const truck = candidates.reduce(function (bestTruck, truckItem) {
             return truckItem.consumption < bestTruck.consumption ? truckItem : bestTruck;
-        }, TRUCKS[0]);
+        }, candidates[0]);
 
         return {
             truck,
-            reason: `${truck.name} ist die günstigste Empfehlung, weil er mit ${formatNumber(truck.consumption, 0)} l / 100 km den niedrigsten Verbrauch hat.`
+            reason: `${truck.name} ist die günstigste passende Empfehlung, weil er mit ${formatNumber(truck.consumption, 1)} l / 100 km den niedrigsten Verbrauch unter den passenden Fahrzeugen hat.`
         };
+    }
+
+    function canVehicleCarryPackage(vehicle, packageData) {
+        if (!packageData.isValid) {
+            return false;
+        }
+
+        return packageData.totalWeightKg <= vehicle.payloadKg
+            && packageData.totalVolumeM3 <= vehicle.volumeM3
+            && packageData.lengthCm <= vehicle.cargoLengthCm
+            && packageData.widthCm <= vehicle.cargoWidthCm
+            && packageData.heightCm <= vehicle.cargoHeightCm;
+    }
+
+    function getVehicleEfficiencyScore(vehicle, packageData) {
+        const weightUsage = packageData.totalWeightKg / vehicle.payloadKg;
+        const volumeUsage = packageData.totalVolumeM3 / vehicle.volumeM3;
+        const usagePenalty = Math.abs(0.72 - Math.max(weightUsage, volumeUsage)) * 6;
+
+        return vehicle.consumption + usagePenalty - vehicle.speedScore * 0.2;
+    }
+
+    function calculateBwlCosts(vehicle, durationHours) {
+        const acquisitionShare = vehicle.purchaseCost / vehicle.depreciationYears / vehicle.annualTrips;
+        const maintenanceShare = vehicle.maintenancePerYear / vehicle.annualTrips;
+        const trainingShare = vehicle.trainingCost / vehicle.trainingYears / vehicle.annualTrips;
+        const personnelCost = durationHours * vehicle.personnelHourlyRate;
+
+        return {
+            acquisitionShare,
+            maintenanceShare,
+            trainingShare,
+            personnelCost,
+            total: acquisitionShare + maintenanceShare + trainingShare + personnelCost
+        };
+    }
+
+    function calculateBenefits(priority, vehicle, durationHours, totalCost) {
+        const baseTimeSavingFactor = priority === PRIORITIES.schnell ? 0.18 : priority === PRIORITIES.effizient ? 0.12 : 0.08;
+        const timeSavedMinutes = durationHours * 60 * baseTimeSavingFactor;
+        const efficiencyGainPercent = priority === PRIORITIES.effizient ? 16 : priority === PRIORITIES.schnell ? 12 : 10;
+        const errorReductionPercent = 18;
+        const revenuePotential = totalCost * (priority === PRIORITIES.schnell ? 0.18 : 0.12);
+
+        return {
+            timeSavedMinutes,
+            efficiencyGainPercent,
+            errorReductionPercent,
+            revenuePotential,
+            explanation: `${vehicle.name} vermeidet unnötig große Fahrzeuge und reduziert dadurch Leerraum, Kraftstoffbedarf und Planungsfehler.`
+        };
+    }
+
+    function renderBwlBreakdown(plan) {
+        elements.bwlCosts.innerHTML = "";
+        elements.bwlBenefits.innerHTML = "";
+
+        [
+            ["Anschaffungskosten", plan.bwlCosts.acquisitionShare],
+            ["Wartungskosten", plan.bwlCosts.maintenanceShare],
+            ["Schulungskosten", plan.bwlCosts.trainingShare],
+            ["Personalkosten", plan.bwlCosts.personnelCost]
+        ].forEach(function (item) {
+            elements.bwlCosts.appendChild(createBreakdownItem(item[0], formatCurrency(item[1])));
+        });
+
+        [
+            ["Zeitersparnis", `${formatNumber(plan.benefits.timeSavedMinutes, 0)} min`],
+            ["Umsatzsteigerung", `${formatCurrency(plan.benefits.revenuePotential)} Potenzial`],
+            ["Effizienz", `+${formatNumber(plan.benefits.efficiencyGainPercent, 0)} %`],
+            ["Fehlerreduktion", `-${formatNumber(plan.benefits.errorReductionPercent, 0)} %`]
+        ].forEach(function (item) {
+            elements.bwlBenefits.appendChild(createBreakdownItem(item[0], item[1]));
+        });
+    }
+
+    function createBreakdownItem(label, value) {
+        const item = document.createElement("li");
+        const labelElement = document.createElement("span");
+        const valueElement = document.createElement("strong");
+
+        labelElement.textContent = label;
+        valueElement.textContent = value;
+        item.append(labelElement, valueElement);
+
+        return item;
     }
 
     function calculateDistance(start, ziel) {
@@ -668,10 +935,18 @@
         elements.routeInfo.textContent = "";
         elements.resultTruck.textContent = "-";
         elements.resultTruckInfo.textContent = "";
+        elements.resultPackage.textContent = "-";
+        elements.resultLoad.textContent = "";
+        elements.summaryRoute.textContent = "-";
+        elements.summaryPackage.textContent = "-";
+        elements.summaryVehicle.textContent = "-";
+        elements.summaryCost.textContent = "-";
         elements.fuelLiters.textContent = "-";
         elements.fuelInfo.textContent = "";
         elements.cost.textContent = "-";
         elements.costInfo.textContent = "";
+        elements.bwlCosts.innerHTML = "";
+        elements.bwlBenefits.innerHTML = "";
         elements.recommendationTitle.textContent = "-";
         elements.recommendationText.textContent = "";
 
@@ -708,9 +983,9 @@
 
     function getSelectedTruck() {
         const selectedTruckId = elements.form.elements.truck.value;
-        return TRUCKS.find(function (truck) {
+        return VEHICLES.find(function (truck) {
             return truck.id === selectedTruckId;
-        }) || TRUCKS[0];
+        }) || VEHICLES[0];
     }
 
     function getSelectedPriority() {
@@ -721,10 +996,39 @@
         return Number(elements.dieselPrice.value.replace(",", "."));
     }
 
+    function getPackageData() {
+        const lengthCm = getNumericInputValue(elements.packageLength);
+        const widthCm = getNumericInputValue(elements.packageWidth);
+        const heightCm = getNumericInputValue(elements.packageHeight);
+        const weightKg = getNumericInputValue(elements.packageWeight);
+        const quantity = Math.max(1, Math.round(getNumericInputValue(elements.packageQuantity)));
+        const values = [lengthCm, widthCm, heightCm, weightKg, quantity];
+        const isValid = values.every(function (value) {
+            return Number.isFinite(value) && value > 0;
+        });
+        const singleVolumeM3 = isValid ? lengthCm / 100 * (widthCm / 100) * (heightCm / 100) : 0;
+
+        return {
+            isValid,
+            lengthCm,
+            widthCm,
+            heightCm,
+            weightKg,
+            quantity,
+            singleVolumeM3,
+            totalVolumeM3: singleVolumeM3 * quantity,
+            totalWeightKg: weightKg * quantity
+        };
+    }
+
+    function getNumericInputValue(input) {
+        return Number(String(input.value).replace(",", "."));
+    }
+
     function updateSelectedTruckDetails() {
         const truck = getSelectedTruck();
         elements.selectedTruckName.textContent = truck.name;
-        elements.selectedTruckDetails.textContent = `${formatNumber(truck.consumption, 0)} l / 100 km · ${truck.description}`;
+        elements.selectedTruckDetails.textContent = `${formatNumber(truck.consumption, 1)} l / 100 km · ${formatNumber(truck.payloadKg, 0)} kg Nutzlast · ${formatNumber(truck.volumeM3, 1)} m³ Laderaum`;
     }
 
     function showFieldError(field, message) {

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Logistikplaner zur Berechnung von Fahrtrouten, Entfernung und Fahrzeit.">
-    <title>Routenplaner - Logistikplaner</title>
+    <meta name="description" content="PaketPilot Logistik GmbH: Kostenplaner für Lieferfahrten, Pakete, Fahrzeuge und BWL-Auswertung.">
+    <title>PaketPilot Logistik GmbH - Kostenplaner</title>
 
     <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -16,29 +16,62 @@
             <div class="brand-block">
                 <div class="brand-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24" focusable="false">
-                        <path d="M4 7.5A3.5 3.5 0 0 1 7.5 4h1.25a3.5 3.5 0 0 1 3.5 3.5v9a3.5 3.5 0 0 0 3.5 3.5h.75A3.5 3.5 0 0 0 20 16.5v-.25"/>
-                        <path d="M4 7.5A3.5 3.5 0 0 0 7.5 11h9A3.5 3.5 0 0 1 20 14.5v1.75"/>
-                        <circle cx="7.5" cy="7.5" r="2.25"/>
-                        <circle cx="17.75" cy="16.25" r="2.25"/>
+                        <path d="M4 7.5 12 3l8 4.5-8 4.5-8-4.5Z"/>
+                        <path d="M4 7.5v9L12 21l8-4.5v-9"/>
+                        <path d="M12 12v9"/>
+                        <path d="M8.5 9.5 16.5 5"/>
                     </svg>
                 </div>
                 <div>
-                    <p class="eyebrow">KI-Logistikplaner</p>
-                    <h1>Routenplaner</h1>
+                    <p class="eyebrow">PaketPilot Logistik GmbH</p>
+                    <h1>Kostenplaner</h1>
+                    <p class="company-management">Geschäftsführung: Simon, Marcel und Sebastian</p>
                 </div>
             </div>
             <div class="service-pill">
                 <span class="status-dot" aria-hidden="true"></span>
-                KI-Heuristik und OSRM
+                Routenplanung, Paketprüfung und BWL-Kosten
             </div>
         </header>
+
+        <section class="overview-windows" aria-label="Projektübersicht">
+            <article class="window-card">
+                <span class="window-number">01</span>
+                <div>
+                    <h2>Firmenfenster</h2>
+                    <p>PaketPilot Logistik GmbH plant Lieferfahrten mit klarer Kosten- und Nutzenrechnung.</p>
+                </div>
+            </article>
+            <article class="window-card">
+                <span class="window-number">02</span>
+                <div>
+                    <h2>Sendungsfenster</h2>
+                    <p>Paketmaße, Gewicht und Anzahl bestimmen, ob Transporter oder 7,5-Tonner sinnvoll sind.</p>
+                </div>
+            </article>
+            <article class="window-card">
+                <span class="window-number">03</span>
+                <div>
+                    <h2>Fahrzeugfenster</h2>
+                    <p>Das kleinste passende Fahrzeug wird empfohlen, damit Leerraum und Kosten sinken.</p>
+                </div>
+            </article>
+            <article class="window-card">
+                <span class="window-number">04</span>
+                <div>
+                    <h2>BWL-Fenster</h2>
+                    <p>Anschaffung, Wartung, Schulung, Personal und Nutzen werden pro Fahrt zusammengefasst.</p>
+                </div>
+            </article>
+        </section>
 
         <main class="layout-grid">
             <section class="panel planner-panel" aria-labelledby="planner-title">
                 <div class="panel-header">
                     <div>
-                        <p class="eyebrow">Planung</p>
-                        <h2 id="planner-title">Route berechnen</h2>
+                        <p class="eyebrow">Planungsfenster</p>
+                        <h2 id="planner-title">Lieferung erfassen</h2>
+                        <p class="panel-subtitle">Route, Paket, Fahrzeug und Kostenbasis in vier klaren Schritten.</p>
                     </div>
                     <svg class="panel-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                         <path d="M3 6.5h6l6 11h6"/>
@@ -49,75 +82,140 @@
                 </div>
 
                 <form id="route-form" novalidate>
-                    <div class="form-group">
-                        <label for="start">Start-Adresse</label>
-                        <div class="autocomplete-wrapper">
-                            <input type="text" id="start" name="start" placeholder="z.B. Berlin, Deutschland" autocomplete="off" spellcheck="false">
-                            <ul id="start-suggestions" class="autocomplete-suggestions" aria-label="Start-Vorschläge"></ul>
-                        </div>
-                        <small id="start-error" class="field-error"></small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="ziel">Ziel-Adresse</label>
-                        <div class="autocomplete-wrapper">
-                            <input type="text" id="ziel" name="ziel" placeholder="z.B. München, Deutschland" autocomplete="off" spellcheck="false">
-                            <ul id="ziel-suggestions" class="autocomplete-suggestions" aria-label="Ziel-Vorschläge"></ul>
-                        </div>
-                        <small id="ziel-error" class="field-error"></small>
-                    </div>
-
-                    <div class="control-grid">
+                    <div class="form-window">
+                        <div class="form-window-title">Fenster 1 · Route</div>
                         <div class="form-group">
-                            <label for="priority">Priorität</label>
-                            <select id="priority" name="priority">
-                                <option value="guenstig">Günstig</option>
-                                <option value="effizient" selected>Effizient / ausgewogen</option>
-                                <option value="schnell">Schnell</option>
-                            </select>
+                            <label for="start">Start-Adresse</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="start" name="start" placeholder="z.B. Berlin, Deutschland" autocomplete="off" spellcheck="false">
+                                <ul id="start-suggestions" class="autocomplete-suggestions" aria-label="Start-Vorschläge"></ul>
+                            </div>
+                            <small id="start-error" class="field-error"></small>
                         </div>
 
                         <div class="form-group">
-                            <label for="diesel-price">Dieselpreis pro Liter</label>
-                            <div class="input-with-unit">
-                                <input type="number" id="diesel-price" name="diesel-price" min="0.50" max="5.00" step="0.01" value="1.70">
-                                <span>EUR</span>
+                            <label for="ziel">Ziel-Adresse</label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="ziel" name="ziel" placeholder="z.B. München, Deutschland" autocomplete="off" spellcheck="false">
+                                <ul id="ziel-suggestions" class="autocomplete-suggestions" aria-label="Ziel-Vorschläge"></ul>
+                            </div>
+                            <small id="ziel-error" class="field-error"></small>
+                        </div>
+                    </div>
+
+                    <fieldset class="package-fieldset form-window">
+                        <legend>Fenster 2 · Paket anlegen</legend>
+                        <div class="package-grid">
+                            <div class="form-group">
+                                <label for="package-length">Länge</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="package-length" name="package-length" min="1" max="1400" step="1" value="120">
+                                    <span>cm</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="package-width">Breite</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="package-width" name="package-width" min="1" max="260" step="1" value="80">
+                                    <span>cm</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="package-height">Höhe</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="package-height" name="package-height" min="1" max="300" step="1" value="90">
+                                    <span>cm</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="package-weight">Gewicht</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="package-weight" name="package-weight" min="0.1" max="12000" step="0.1" value="250">
+                                    <span>kg</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group package-quantity">
+                                <label for="package-quantity">Anzahl</label>
+                                <input type="number" id="package-quantity" name="package-quantity" min="1" max="500" step="1" value="1">
+                            </div>
+                        </div>
+                        <p class="form-hint">Die Maße gelten pro Paket. Die Logik prüft Gewicht, Volumen und ob das Paket in den Laderaum passt.</p>
+                    </fieldset>
+
+                    <div class="form-window">
+                        <div class="form-window-title">Fenster 3 · Kostenbasis</div>
+                        <div class="control-grid">
+                            <div class="form-group">
+                                <label for="priority">Priorität</label>
+                                <select id="priority" name="priority">
+                                    <option value="guenstig">Günstig</option>
+                                    <option value="effizient" selected>Effizient / ausgewogen</option>
+                                    <option value="schnell">Schnell</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="diesel-price">Dieselpreis pro Liter</label>
+                                <div class="input-with-unit">
+                                    <input type="number" id="diesel-price" name="diesel-price" min="0.50" max="5.00" step="0.01" value="1.70">
+                                    <span>EUR</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <fieldset class="truck-fieldset">
-                        <legend>Fahrzeugauswahl</legend>
+                    <fieldset class="truck-fieldset form-window">
+                        <legend>Fenster 4 · Fahrzeugauswahl</legend>
                         <div class="truck-options" id="truck-options">
                             <label class="truck-option">
-                                <input type="radio" name="truck" value="actros" checked>
+                                <input type="radio" name="truck" value="vito">
                                 <span class="truck-option-content">
-                                    <span class="truck-option-name">Mercedes-Benz Actros</span>
-                                    <span class="truck-option-meta">28 l / 100 km</span>
+                                    <span class="truck-option-name">Mercedes-Benz Vito</span>
+                                    <span class="truck-option-meta">900 kg · 6,0 m³ · 8,5 l / 100 km</span>
                                 </span>
                             </label>
 
                             <label class="truck-option">
-                                <input type="radio" name="truck" value="man-tgx">
+                                <input type="radio" name="truck" value="sprinter" checked>
                                 <span class="truck-option-content">
-                                    <span class="truck-option-name">MAN TGX</span>
-                                    <span class="truck-option-meta">30 l / 100 km</span>
+                                    <span class="truck-option-name">Mercedes-Benz Sprinter</span>
+                                    <span class="truck-option-meta">1.200 kg · 14,0 m³ · 10,5 l / 100 km</span>
                                 </span>
                             </label>
 
                             <label class="truck-option">
-                                <input type="radio" name="truck" value="volvo-fh">
+                                <input type="radio" name="truck" value="crafter">
                                 <span class="truck-option-content">
-                                    <span class="truck-option-name">Volvo FH</span>
-                                    <span class="truck-option-meta">27 l / 100 km</span>
+                                    <span class="truck-option-name">Volkswagen Crafter</span>
+                                    <span class="truck-option-meta">1.300 kg · 16,4 m³ · 10,8 l / 100 km</span>
                                 </span>
                             </label>
 
                             <label class="truck-option">
-                                <input type="radio" name="truck" value="scania-r">
+                                <input type="radio" name="truck" value="daily-72">
                                 <span class="truck-option-content">
-                                    <span class="truck-option-name">Scania R-Serie</span>
-                                    <span class="truck-option-meta">32 l / 100 km</span>
+                                    <span class="truck-option-name">Iveco Daily 7,2 t</span>
+                                    <span class="truck-option-meta">3.500 kg · 28,0 m³ · 15,5 l / 100 km</span>
+                                </span>
+                            </label>
+
+                            <label class="truck-option">
+                                <input type="radio" name="truck" value="man-tgl-75">
+                                <span class="truck-option-content">
+                                    <span class="truck-option-name">MAN TGL 7,5 t</span>
+                                    <span class="truck-option-meta">3.000 kg · 35,0 m³ · 18,0 l / 100 km</span>
+                                </span>
+                            </label>
+
+                            <label class="truck-option">
+                                <input type="radio" name="truck" value="atego-12">
+                                <span class="truck-option-content">
+                                    <span class="truck-option-name">Mercedes-Benz Atego 12 t</span>
+                                    <span class="truck-option-meta">6.000 kg · 44,0 m³ · 22,0 l / 100 km</span>
                                 </span>
                             </label>
                         </div>
@@ -125,10 +223,10 @@
 
                     <div class="selected-truck-card" aria-live="polite">
                         <div>
-                            <p class="selected-label">Ausgewählter Truck</p>
-                            <strong id="selected-truck-name">Mercedes-Benz Actros</strong>
+                            <p class="selected-label">Ausgewähltes Fahrzeug</p>
+                            <strong id="selected-truck-name">Mercedes-Benz Sprinter</strong>
                         </div>
-                        <p id="selected-truck-details">28 l / 100 km · effizienter Fernverkehr-LKW</p>
+                        <p id="selected-truck-details">10,5 l / 100 km · 1.200 kg Nutzlast · 14,0 m³ Laderaum</p>
                     </div>
 
                     <p id="route-error" class="form-message" role="alert"></p>
@@ -156,6 +254,35 @@
             </section>
 
             <section id="results-section" class="metrics-grid" aria-label="Routendaten" hidden>
+                <article class="metric-card summary-card">
+                    <div class="metric-label">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 5h16"/>
+                            <path d="M4 12h16"/>
+                            <path d="M4 19h16"/>
+                        </svg>
+                        Zusammenfassungsfenster
+                    </div>
+                    <div class="summary-list">
+                        <div>
+                            <span>Route</span>
+                            <strong id="summary-route">-</strong>
+                        </div>
+                        <div>
+                            <span>Sendung</span>
+                            <strong id="summary-package">-</strong>
+                        </div>
+                        <div>
+                            <span>Fahrzeug</span>
+                            <strong id="summary-vehicle">-</strong>
+                        </div>
+                        <div>
+                            <span>Gesamtkosten</span>
+                            <strong id="summary-cost">-</strong>
+                        </div>
+                    </div>
+                </article>
+
                 <article class="metric-card metric-card-primary">
                     <div class="metric-label">
                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -190,10 +317,23 @@
                             <circle cx="7" cy="17" r="2"/>
                             <circle cx="17" cy="17" r="2"/>
                         </svg>
-                        Gewählter Truck
+                        Eingesetzter LKW
                     </div>
                     <p id="result-truck" class="metric-value metric-value-small">-</p>
                     <p id="result-truck-info" class="metric-note"></p>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-label">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 8 12 4l8 4-8 4-8-4Z"/>
+                            <path d="M4 8v8l8 4 8-4V8"/>
+                            <path d="M12 12v8"/>
+                        </svg>
+                        Paketdaten
+                    </div>
+                    <p id="result-package" class="metric-value metric-value-small">-</p>
+                    <p id="result-load" class="metric-note"></p>
                 </article>
 
                 <article class="metric-card">
@@ -222,6 +362,32 @@
                     <p id="cost-info" class="metric-note"></p>
                 </article>
 
+                <article class="metric-card bwl-card">
+                    <div class="metric-label">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 19V5"/>
+                            <path d="M8 17v-6"/>
+                            <path d="M12 17V8"/>
+                            <path d="M16 17v-4"/>
+                            <path d="M20 19H4"/>
+                        </svg>
+                        BWL-Kosten pro Fahrt
+                    </div>
+                    <ul id="bwl-costs" class="breakdown-list"></ul>
+                </article>
+
+                <article class="metric-card bwl-card">
+                    <div class="metric-label">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="m4 16 5-5 4 4 7-8"/>
+                            <path d="M15 7h5v5"/>
+                            <path d="M4 20h16"/>
+                        </svg>
+                        BWL-Nutzen
+                    </div>
+                    <ul id="bwl-benefits" class="breakdown-list"></ul>
+                </article>
+
                 <article class="metric-card recommendation-card">
                     <div class="metric-label">
                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -234,7 +400,7 @@
                             <path d="M10 21h4"/>
                             <path d="M8 12a4 4 0 1 1 8 0c0 1.4-.7 2.4-1.6 3.3-.7.7-1.4 1.4-1.4 2.7h-2c0-1.3-.7-2-1.4-2.7C8.7 14.4 8 13.4 8 12Z"/>
                         </svg>
-                        Intelligente Empfehlung
+                        Planungsempfehlung
                     </div>
                     <p id="recommendation-title" class="recommendation-title">-</p>
                     <p id="recommendation-text" class="metric-note"></p>
