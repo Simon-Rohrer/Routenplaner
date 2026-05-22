@@ -1,425 +1,481 @@
-// Globale Variablen
-let map;
-let routeControl;
-let startCoords = null;
-let endCoords = null;
-let autocompleteTimeout;
+(function () {
+    const DEFAULT_VIEW = {
+        center: [51.1657, 10.4515],
+        zoom: 6
+    };
 
-// Initialisierung beim Laden der Seite
-document.addEventListener('DOMContentLoaded', function() {
-    initMap();
-    setupEventListeners();
-});
+    const ROUTING_SERVICE_URL = "https://router.project-osrm.org/route/v1";
+    const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
 
-// Karte initialisieren
-function initMap() {
-    // Karte mit Zentrierung auf Deutschland
-    map = L.map('map').setView([51.1657, 10.4515], 6);
-    
-    // OpenStreetMap Layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19,
-        minZoom: 3
-    }).addTo(map);
-    
-    // Geocoder hinzufügen (für Adresssuche)
-    L.Control.geocoder({
-        defaultMarkGeocode: false
-    }).on('markgeocode', function(e) {
-        const bbox = e.geocode.bbox;
-        const poly = L.polygon([
-            [bbox.getSouthEast().lat, bbox.getSouthWest().lng],
-            [bbox.getSouthEast().lat, bbox.getNorthEast().lng],
-            [bbox.getNorthWest().lat, bbox.getNorthEast().lng],
-            [bbox.getNorthWest().lat, bbox.getSouthWest().lng]
-        ]).addTo(map);
-        map.fitBounds(poly.getBounds());
-    }).addTo(map);
-}
+    const state = {
+        map: null,
+        routeControl: null,
+        markers: [],
+        start: null,
+        ziel: null,
+        autocompleteTimer: null,
+        activeSuggestionRequest: null
+    };
 
-// Event Listener einrichten
-function setupEventListeners() {
-    document.getElementById('calculate-btn').addEventListener('click', calculateRoute);
-    document.getElementById('clear-btn').addEventListener('click', clearRoute);
-    
-    // Autocomplete für Start-Adresse
-    document.getElementById('start').addEventListener('input', function(e) {
-        handleAutocomplete(e.target.value, 'start');
-    });
-    
-    // Autocomplete für Ziel-Adresse
-    document.getElementById('ziel').addEventListener('input', function(e) {
-        handleAutocomplete(e.target.value, 'ziel');
-    });
-    
-    // Enter-Taste zum Berechnen
-    document.getElementById('start').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') calculateRoute();
-    });
-    document.getElementById('ziel').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') calculateRoute();
-    });
-    
-    // Click outside to close suggestions
-    document.addEventListener('click', function(e) {
-        if (!e.target.classList.contains('autocomplete-suggestions') && 
-            !e.target.id.includes('suggestions') && 
-            !e.target.id === 'start' && 
-            !e.target.id === 'ziel') {
-            document.querySelectorAll('.autocomplete-suggestions').forEach(el => {
-                el.classList.remove('active');
-            });
+    const elements = {};
+
+    document.addEventListener("DOMContentLoaded", initApp);
+
+    function initApp() {
+        cacheElements();
+        initMap();
+        bindEvents();
+    }
+
+    function cacheElements() {
+        elements.form = document.getElementById("route-form");
+        elements.startInput = document.getElementById("start");
+        elements.zielInput = document.getElementById("ziel");
+        elements.startSuggestions = document.getElementById("start-suggestions");
+        elements.zielSuggestions = document.getElementById("ziel-suggestions");
+        elements.startError = document.getElementById("start-error");
+        elements.zielError = document.getElementById("ziel-error");
+        elements.routeError = document.getElementById("route-error");
+        elements.calculateButton = document.getElementById("calculate-btn");
+        elements.clearButton = document.getElementById("clear-btn");
+        elements.results = document.getElementById("results-section");
+        elements.distance = document.getElementById("distance");
+        elements.duration = document.getElementById("duration");
+        elements.routeInfo = document.getElementById("route-info");
+    }
+
+    function initMap() {
+        if (!window.L) {
+            showRouteError("Leaflet konnte nicht geladen werden. Bitte prüfe die Internetverbindung.");
+            return;
         }
-    });
-}
 
-// Autocomplete Handler
-async function handleAutocomplete(query, field) {
-    const suggestionsElement = document.getElementById(`${field}-suggestions`);
-    
-    if (query.length < 2) {
-        suggestionsElement.classList.remove('active');
-        return;
-    }
-    
-    // Entferne alten Timeout
-    clearTimeout(autocompleteTimeout);
-    
-    // Neuer Timeout für Debouncing
-    autocompleteTimeout = setTimeout(async () => {
-        try {
-            const suggestions = await fetchAddressSuggestions(query);
-            displayAutocompleteSuggestions(suggestions, field, suggestionsElement);
-        } catch (error) {
-            console.error('Autocomplete-Fehler:', error);
-            suggestionsElement.classList.remove('active');
-        }
-    }, 300);
-}
+        state.map = L.map("map", {
+            zoomControl: false
+        }).setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
 
-// Adressvorschläge abrufen
-async function fetchAddressSuggestions(query) {
-    try {
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=7&countrycodes=de`
-        );
-        
-        if (!response.ok) throw new Error('Suggestions-Fehler');
-        
-        const results = await response.json();
-        
-        return results.map(result => ({
-            name: result.display_name,
-            lat: result.lat,
-            lng: result.lon,
-            address: result.address
-        }));
-    } catch (error) {
-        console.error('Suggestion-Fehler:', error);
-        return [];
-    }
-}
+        L.control.zoom({
+            position: "bottomright"
+        }).addTo(state.map);
 
-// Autocomplete-Vorschläge anzeigen
-function displayAutocompleteSuggestions(suggestions, field, suggestionsElement) {
-    suggestionsElement.innerHTML = '';
-    
-    if (suggestions.length === 0) {
-        suggestionsElement.classList.remove('active');
-        return;
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap contributors",
+            maxZoom: 19,
+            minZoom: 3
+        }).addTo(state.map);
     }
-    
-    suggestions.forEach((suggestion, index) => {
-        const li = document.createElement('li');
-        li.textContent = suggestion.name;
-        li.addEventListener('click', function() {
-            selectSuggestion(suggestion, field);
+
+    function bindEvents() {
+        elements.form.addEventListener("submit", function (event) {
+            event.preventDefault();
+            calculateRoute();
         });
-        suggestionsElement.appendChild(li);
-    });
-    
-    suggestionsElement.classList.add('active');
-}
 
-// Vorschlag auswählen
-function selectSuggestion(suggestion, field) {
-    document.getElementById(field).value = suggestion.name;
-    document.getElementById(`${field}-suggestions`).classList.remove('active');
-    
-    // Speichere die Koordinaten
-    if (field === 'start') {
-        startCoords = {
-            lat: parseFloat(suggestion.lat),
-            lng: parseFloat(suggestion.lng),
-            name: suggestion.name
-        };
-    } else if (field === 'ziel') {
-        endCoords = {
-            lat: parseFloat(suggestion.lat),
-            lng: parseFloat(suggestion.lng),
-            name: suggestion.name
-        };
-    }
-}
+        elements.clearButton.addEventListener("click", clearPlanner);
 
-// Route berechnen
-async function calculateRoute() {
-    const startAddress = document.getElementById('start').value.trim();
-    const endAddress = document.getElementById('ziel').value.trim();
-    
-    clearErrors();
-    
-    if (!startAddress || !endAddress) {
-        showError('start', 'Bitte beide Adressen eingeben');
-        return;
+        elements.startInput.addEventListener("input", function () {
+            state.start = null;
+            handleAutocomplete(elements.startInput.value, "start");
+        });
+
+        elements.zielInput.addEventListener("input", function () {
+            state.ziel = null;
+            handleAutocomplete(elements.zielInput.value, "ziel");
+        });
+
+        elements.startInput.addEventListener("keydown", handleInputKeydown);
+        elements.zielInput.addEventListener("keydown", handleInputKeydown);
+
+        document.addEventListener("pointerdown", function (event) {
+            if (!event.target.closest(".autocomplete-wrapper")) {
+                closeSuggestions();
+            }
+        });
     }
-    
-    // Loading-State
-    const btn = document.getElementById('calculate-btn');
-    btn.classList.add('loading');
-    btn.disabled = true;
-    
-    try {
-        // Verwende gecachte Koordinaten falls vorhanden, sonst geocodiere
-        if (!startCoords || startCoords.name !== startAddress) {
-            startCoords = await geocodeAddress(startAddress);
+
+    function handleInputKeydown(event) {
+        if (event.key === "Escape") {
+            closeSuggestions();
         }
-        
-        if (!endCoords || endCoords.name !== endAddress) {
-            endCoords = await geocodeAddress(endAddress);
+    }
+
+    function handleAutocomplete(query, field) {
+        const normalizedQuery = query.trim();
+        const suggestionsElement = getSuggestionsElement(field);
+
+        clearTimeout(state.autocompleteTimer);
+
+        if (state.activeSuggestionRequest) {
+            state.activeSuggestionRequest.abort();
+            state.activeSuggestionRequest = null;
         }
-        
-        if (!startCoords) {
-            showError('start', `Start-Adresse nicht gefunden: "${startAddress}"`);
+
+        if (normalizedQuery.length < 3) {
+            clearSuggestions(suggestionsElement);
             return;
         }
-        
-        if (!endCoords) {
-            showError('ziel', `Ziel-Adresse nicht gefunden: "${endAddress}"`);
-            return;
-        }
-        
-        // Route auf der Karte darstellen
-        displayRoute(startCoords, endCoords);
-        
-        // Ergebnisse anzeigen
-        displayResults(startCoords, endCoords);
-        
-    } catch (error) {
-        console.error('Fehler bei Routenberechnung:', error);
-        showError('start', 'Fehler bei der Routenberechnung. Bitte versuchen Sie es erneut.');
-    } finally {
-        btn.classList.remove('loading');
-        btn.disabled = false;
-    }
-}
 
-// Adresse zu Koordinaten
-async function geocodeAddress(address) {
-    try {
-        const response = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`
-        );
-        
-        if (!response.ok) throw new Error('Geocoding fehler');
-        
+        state.autocompleteTimer = setTimeout(async function () {
+            const controller = new AbortController();
+            state.activeSuggestionRequest = controller;
+
+            try {
+                const suggestions = await fetchAddressSuggestions(normalizedQuery, controller.signal);
+                renderSuggestions(suggestions, field, suggestionsElement);
+            } catch (error) {
+                if (error.name !== "AbortError") {
+                    clearSuggestions(suggestionsElement);
+                }
+            } finally {
+                if (state.activeSuggestionRequest === controller) {
+                    state.activeSuggestionRequest = null;
+                }
+            }
+        }, 280);
+    }
+
+    async function fetchAddressSuggestions(query, signal) {
+        const url = new URL(NOMINATIM_SEARCH_URL);
+        url.searchParams.set("format", "json");
+        url.searchParams.set("q", query);
+        url.searchParams.set("limit", "7");
+        url.searchParams.set("countrycodes", "de");
+        url.searchParams.set("addressdetails", "1");
+
+        const response = await fetch(url.toString(), { signal });
+
+        if (!response.ok) {
+            throw new Error("Adressvorschläge konnten nicht geladen werden.");
+        }
+
         const results = await response.json();
-        
-        if (results.length === 0) {
+
+        return results.map(function (result) {
+            return {
+                label: result.display_name,
+                lat: Number(result.lat),
+                lng: Number(result.lon)
+            };
+        }).filter(function (result) {
+            return Number.isFinite(result.lat) && Number.isFinite(result.lng);
+        });
+    }
+
+    function renderSuggestions(suggestions, field, suggestionsElement) {
+        clearSuggestions(suggestionsElement);
+
+        if (!suggestions.length) {
+            return;
+        }
+
+        suggestions.forEach(function (suggestion) {
+            const item = document.createElement("li");
+            item.tabIndex = 0;
+            item.textContent = suggestion.label;
+            item.addEventListener("click", function () {
+                selectSuggestion(suggestion, field);
+            });
+            item.addEventListener("keydown", function (event) {
+                if (event.key === "Enter") {
+                    selectSuggestion(suggestion, field);
+                }
+            });
+            suggestionsElement.appendChild(item);
+        });
+
+        suggestionsElement.classList.add("active");
+    }
+
+    function selectSuggestion(suggestion, field) {
+        const input = getInputElement(field);
+        input.value = suggestion.label;
+
+        state[field] = {
+            lat: suggestion.lat,
+            lng: suggestion.lng,
+            label: suggestion.label
+        };
+
+        clearSuggestions(getSuggestionsElement(field));
+        clearErrors();
+    }
+
+    async function calculateRoute() {
+        if (!state.map) {
+            showRouteError("Die Karte ist noch nicht bereit.");
+            return;
+        }
+
+        if (!window.L || !L.Routing || !L.Routing.control) {
+            showRouteError("Die Routing-Bibliothek konnte nicht geladen werden. Bitte lade die Seite neu.");
+            return;
+        }
+
+        const startAddress = elements.startInput.value.trim();
+        const zielAddress = elements.zielInput.value.trim();
+
+        clearErrors();
+
+        if (!startAddress) {
+            showFieldError("start", "Bitte eine Start-Adresse eingeben.");
+        }
+
+        if (!zielAddress) {
+            showFieldError("ziel", "Bitte eine Ziel-Adresse eingeben.");
+        }
+
+        if (!startAddress || !zielAddress) {
+            return;
+        }
+
+        setBusy(true);
+
+        try {
+            const start = await resolveAddress(startAddress, "start");
+            const ziel = await resolveAddress(zielAddress, "ziel");
+
+            if (!start) {
+                showFieldError("start", `Start-Adresse nicht gefunden: "${startAddress}"`);
+                return;
+            }
+
+            if (!ziel) {
+                showFieldError("ziel", `Ziel-Adresse nicht gefunden: "${zielAddress}"`);
+                return;
+            }
+
+            state.start = start;
+            state.ziel = ziel;
+
+            drawRoute(start, ziel);
+        } catch (error) {
+            showRouteError("Die Route konnte nicht berechnet werden. Bitte versuche es erneut.");
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    async function resolveAddress(address, field) {
+        const cached = state[field];
+
+        if (cached && cached.label === address) {
+            return cached;
+        }
+
+        const suggestions = await fetchAddressSuggestions(address);
+
+        if (!suggestions.length) {
             return null;
         }
-        
-        const result = results[0];
+
         return {
-            lat: parseFloat(result.lat),
-            lng: parseFloat(result.lon),
-            name: result.display_name
+            lat: suggestions[0].lat,
+            lng: suggestions[0].lng,
+            label: suggestions[0].label
         };
-    } catch (error) {
-        console.error('Geocoding-Fehler:', error);
-        return null;
     }
-}
 
-// Route anzeigen
-function displayRoute(start, end) {
-    // Alte Route entfernen
-    if (routeControl) {
-        map.removeControl(routeControl);
-    }
-    
-    // Leaflet Routing Machine mit OSRM API
-    routeControl = L.Routing.control({
-        waypoints: [
-            L.latLng(start.lat, start.lng),
-            L.latLng(end.lat, end.lng)
-        ],
-        router: L.Routing.osrmv1({
-            serviceUrl: 'https://router.project-osrm.org/route/v1'
-        }),
-        lineOptions: {
-            styles: [
-                { color: '#667eea', opacity: 0.8, weight: 5 },
-                { color: '#764ba2', opacity: 0.4, weight: 10 }
+    function drawRoute(start, ziel) {
+        removeRouteLayers();
+        showPendingResults();
+
+        state.markers = [
+            createMarker(start, "start").addTo(state.map).bindPopup("Start"),
+            createMarker(ziel, "ziel").addTo(state.map).bindPopup("Ziel")
+        ];
+
+        state.routeControl = L.Routing.control({
+            waypoints: [
+                L.latLng(start.lat, start.lng),
+                L.latLng(ziel.lat, ziel.lng)
             ],
-            extendToWaypoints: true,
-            missingRouteTolerance: 2
-        },
-        addWaypoints: false,
-        draggableWaypoints: true,
-        fitSelectedRoutes: true,
-        showAlternatives: false,
-        altLineOptions: {
-            styles: [
-                { color: '#ccc', opacity: 0.5, weight: 3 }
-            ]
-        }
-    }).addTo(map);
-    
-    // Start- und Endpunkte markieren
-    L.marker([start.lat, start.lng], {
-        icon: L.icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-        })
-    }).addTo(map).bindPopup('📍 Start');
-    
-    L.marker([end.lat, end.lng], {
-        icon: L.icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-        })
-    }).addTo(map).bindPopup('🎯 Ziel');
-}
-
-// Ergebnisse anzeigen
-async function displayResults(start, end) {
-    try {
-        // Reale Routendaten von OSRM abrufen
-        const routeData = await getRouteData(start, end);
-        
-        const resultsSection = document.getElementById('results-section');
-        const distanceElement = document.getElementById('distance');
-        const durationElement = document.getElementById('duration');
-        const routeInfoElement = document.getElementById('route-info');
-        
-        if (routeData) {
-            // Mit echten OSRM-Daten
-            const distanceKm = (routeData.distance / 1000).toFixed(2);
-            const durationMin = Math.round(routeData.duration / 60);
-            const durationHours = Math.floor(durationMin / 60);
-            const durationMins = durationMin % 60;
-            
-            distanceElement.textContent = distanceKm;
-            
-            if (durationHours > 0) {
-                durationElement.textContent = `${durationHours}h ${durationMins}min`;
-            } else {
-                durationElement.textContent = `${durationMins}min`;
+            router: L.Routing.osrmv1({
+                serviceUrl: ROUTING_SERVICE_URL
+            }),
+            lineOptions: {
+                styles: [
+                    { color: "#14b8a6", opacity: 0.95, weight: 5 },
+                    { color: "#f59e0b", opacity: 0.45, weight: 9 }
+                ],
+                extendToWaypoints: true,
+                missingRouteTolerance: 2
+            },
+            addWaypoints: false,
+            draggableWaypoints: false,
+            fitSelectedRoutes: true,
+            routeWhileDragging: false,
+            show: false,
+            showAlternatives: false,
+            createMarker: function () {
+                return null;
             }
-            
-            const avgSpeed = Math.round(routeData.distance / (routeData.duration / 3600) / 1000);
-            routeInfoElement.textContent = `Durchschnitt: ${avgSpeed} km/h`;
-        } else {
-            // Fallback auf Luftlinien-Entfernung
-            const distance = calculateDistance(start, end);
-            distanceElement.textContent = distance.toFixed(2);
-            durationElement.textContent = 'Berechnung lädt...';
-            routeInfoElement.textContent = 'Luftlinien-Entfernung';
-        }
-        
-        resultsSection.style.display = 'block';
-        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        
-    } catch (error) {
-        console.error('Fehler bei Ergebnisanzeige:', error);
+        }).addTo(state.map);
+
+        state.routeControl.on("routesfound", function (event) {
+            const route = event.routes[0];
+            if (route && route.summary) {
+                renderRouteMetrics(route.summary.totalDistance, route.summary.totalTime, "Straßenroute");
+            }
+        });
+
+        state.routeControl.on("routingerror", function () {
+            renderFallbackMetrics(start, ziel);
+            showRouteError("OSRM konnte keine Straßenroute liefern. Angezeigt wird die Luftlinien-Entfernung.");
+        });
     }
-}
 
-// Entfernung zwischen zwei Koordinaten berechnen (Haversine-Formel)
-function calculateDistance(start, end) {
-    const R = 6371; // Erdradius in km
-    const dLat = (end.lat - start.lat) * Math.PI / 180;
-    const dLng = (end.lng - start.lng) * Math.PI / 180;
-    const a = 
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(start.lat * Math.PI / 180) * Math.cos(end.lat * Math.PI / 180) *
-        Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-}
+    function createMarker(location, type) {
+        const isEnd = type === "ziel";
+        const icon = L.divIcon({
+            className: "",
+            html: `
+                <span class="route-marker ${isEnd ? "route-marker-end" : ""}" aria-hidden="true">
+                    ${getMarkerIcon(isEnd)}
+                </span>
+            `,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            popupAnchor: [0, -18]
+        });
 
-// Route-Daten von OSRM abrufen
-async function getRouteData(start, end) {
-    try {
-        const response = await fetch(
-            `https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=false`
-        );
-        
-        if (!response.ok) throw new Error('Route API-Fehler');
-        
-        const data = await response.json();
-        
-        if (data.routes && data.routes.length > 0) {
-            return {
-                distance: data.routes[0].distance,
-                duration: data.routes[0].duration
-            };
-        }
-        
-        return null;
-    } catch (error) {
-        console.error('OSRM-Fehler:', error);
-        return null;
+        return L.marker([location.lat, location.lng], { icon });
     }
-}
 
-// Route löschen
-function clearRoute() {
-    document.getElementById('start').value = '';
-    document.getElementById('ziel').value = '';
-    document.getElementById('results-section').style.display = 'none';
-    clearErrors();
-    
-    if (routeControl) {
-        map.removeControl(routeControl);
-        routeControl = null;
-    }
-    
-    // Alle Marker entfernen
-    map.eachLayer(layer => {
-        if (layer instanceof L.Marker) {
-            map.removeLayer(layer);
+    function getMarkerIcon(isEnd) {
+        if (isEnd) {
+            return '<svg viewBox="0 0 24 24" focusable="false"><path d="M6 4v16"/><path d="M6 5h10l-2 4 2 4H6"/></svg>';
         }
-    });
-    
-    startCoords = null;
-    endCoords = null;
-    
-    // Karte auf Deutschland zurückzentrieren
-    map.setView([51.1657, 10.4515], 6);
-}
 
-// Fehler anzeigen
-function showError(field, message) {
-    const errorElement = document.getElementById(`${field}-error`);
-    if (errorElement) {
+        return '<svg viewBox="0 0 24 24" focusable="false"><path d="M12 21s7-5.1 7-11a7 7 0 1 0-14 0c0 5.9 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+    }
+
+    function showPendingResults() {
+        elements.results.hidden = false;
+        elements.distance.textContent = "-";
+        elements.duration.textContent = "Wird berechnet";
+        elements.routeInfo.textContent = "Routingdaten werden geladen.";
+    }
+
+    function renderRouteMetrics(distanceMeters, durationSeconds, sourceLabel) {
+        const distanceKm = distanceMeters / 1000;
+        const durationMinutes = Math.max(1, Math.round(durationSeconds / 60));
+        const averageSpeed = Math.round(distanceKm / (durationSeconds / 3600));
+
+        elements.results.hidden = false;
+        elements.distance.textContent = distanceKm.toFixed(2);
+        elements.duration.textContent = formatDuration(durationMinutes);
+        elements.routeInfo.textContent = `${sourceLabel} mit ca. ${averageSpeed} km/h Durchschnitt.`;
+        clearErrors();
+    }
+
+    function renderFallbackMetrics(start, ziel) {
+        const distanceKm = calculateDistance(start, ziel);
+
+        elements.results.hidden = false;
+        elements.distance.textContent = distanceKm.toFixed(2);
+        elements.duration.textContent = "Nicht verfügbar";
+        elements.routeInfo.textContent = "Luftlinien-Entfernung ohne Fahrzeit.";
+    }
+
+    function calculateDistance(start, ziel) {
+        const earthRadiusKm = 6371;
+        const latDistance = toRadians(ziel.lat - start.lat);
+        const lngDistance = toRadians(ziel.lng - start.lng);
+        const startLat = toRadians(start.lat);
+        const zielLat = toRadians(ziel.lat);
+
+        const a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+            + Math.cos(startLat) * Math.cos(zielLat)
+            * Math.sin(lngDistance / 2) * Math.sin(lngDistance / 2);
+
+        return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function toRadians(value) {
+        return value * Math.PI / 180;
+    }
+
+    function formatDuration(totalMinutes) {
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+
+        if (!hours) {
+            return `${minutes} min`;
+        }
+
+        if (!minutes) {
+            return `${hours} h`;
+        }
+
+        return `${hours} h ${minutes} min`;
+    }
+
+    function clearPlanner() {
+        elements.form.reset();
+        elements.results.hidden = true;
+        elements.distance.textContent = "-";
+        elements.duration.textContent = "-";
+        elements.routeInfo.textContent = "";
+
+        clearErrors();
+        closeSuggestions();
+        removeRouteLayers();
+
+        state.start = null;
+        state.ziel = null;
+
+        if (state.map) {
+            state.map.setView(DEFAULT_VIEW.center, DEFAULT_VIEW.zoom);
+        }
+    }
+
+    function removeRouteLayers() {
+        if (state.routeControl) {
+            state.map.removeControl(state.routeControl);
+            state.routeControl = null;
+        }
+
+        state.markers.forEach(function (marker) {
+            marker.remove();
+        });
+        state.markers = [];
+    }
+
+    function setBusy(isBusy) {
+        elements.calculateButton.disabled = isBusy;
+        elements.calculateButton.querySelector("span").textContent = isBusy ? "Berechne Route" : "Route berechnen";
+    }
+
+    function showFieldError(field, message) {
+        const errorElement = field === "start" ? elements.startError : elements.zielError;
         errorElement.textContent = message;
-        errorElement.style.display = 'block';
     }
-}
 
-// Fehler löschen
-function clearErrors() {
-    document.getElementById('start-error').textContent = '';
-    document.getElementById('ziel-error').textContent = '';
-}
+    function showRouteError(message) {
+        elements.routeError.textContent = message;
+    }
+
+    function clearErrors() {
+        elements.startError.textContent = "";
+        elements.zielError.textContent = "";
+        elements.routeError.textContent = "";
+    }
+
+    function closeSuggestions() {
+        clearSuggestions(elements.startSuggestions);
+        clearSuggestions(elements.zielSuggestions);
+    }
+
+    function clearSuggestions(suggestionsElement) {
+        suggestionsElement.innerHTML = "";
+        suggestionsElement.classList.remove("active");
+    }
+
+    function getInputElement(field) {
+        return field === "start" ? elements.startInput : elements.zielInput;
+    }
+
+    function getSuggestionsElement(field) {
+        return field === "start" ? elements.startSuggestions : elements.zielSuggestions;
+    }
+})();
