@@ -1,1 +1,3 @@
 Protokoll
+Alle Brainstorming
+Seb CSV Dateien/Datenbankverwaltung
