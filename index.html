@@ -8,7 +8,6 @@
 
     <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
     <link rel="stylesheet" href="css/routenplaner.css">
 </head>
 <body>
@@ -24,13 +23,13 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="eyebrow">Logistikplaner</p>
+                    <p class="eyebrow">KI-Logistikplaner</p>
                     <h1>Routenplaner</h1>
                 </div>
             </div>
             <div class="service-pill">
                 <span class="status-dot" aria-hidden="true"></span>
-                Nominatim und OSRM
+                KI-Heuristik und OSRM
             </div>
         </header>
 
@@ -66,6 +65,70 @@
                             <ul id="ziel-suggestions" class="autocomplete-suggestions" aria-label="Ziel-Vorschläge"></ul>
                         </div>
                         <small id="ziel-error" class="field-error"></small>
+                    </div>
+
+                    <div class="control-grid">
+                        <div class="form-group">
+                            <label for="priority">Priorität</label>
+                            <select id="priority" name="priority">
+                                <option value="guenstig">Günstig</option>
+                                <option value="effizient" selected>Effizient / ausgewogen</option>
+                                <option value="schnell">Schnell</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="diesel-price">Dieselpreis pro Liter</label>
+                            <div class="input-with-unit">
+                                <input type="number" id="diesel-price" name="diesel-price" min="0.50" max="5.00" step="0.01" value="1.70">
+                                <span>EUR</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <fieldset class="truck-fieldset">
+                        <legend>Fahrzeugauswahl</legend>
+                        <div class="truck-options" id="truck-options">
+                            <label class="truck-option">
+                                <input type="radio" name="truck" value="actros" checked>
+                                <span class="truck-option-content">
+                                    <span class="truck-option-name">Mercedes-Benz Actros</span>
+                                    <span class="truck-option-meta">28 l / 100 km</span>
+                                </span>
+                            </label>
+
+                            <label class="truck-option">
+                                <input type="radio" name="truck" value="man-tgx">
+                                <span class="truck-option-content">
+                                    <span class="truck-option-name">MAN TGX</span>
+                                    <span class="truck-option-meta">30 l / 100 km</span>
+                                </span>
+                            </label>
+
+                            <label class="truck-option">
+                                <input type="radio" name="truck" value="volvo-fh">
+                                <span class="truck-option-content">
+                                    <span class="truck-option-name">Volvo FH</span>
+                                    <span class="truck-option-meta">27 l / 100 km</span>
+                                </span>
+                            </label>
+
+                            <label class="truck-option">
+                                <input type="radio" name="truck" value="scania-r">
+                                <span class="truck-option-content">
+                                    <span class="truck-option-name">Scania R-Serie</span>
+                                    <span class="truck-option-meta">32 l / 100 km</span>
+                                </span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <div class="selected-truck-card" aria-live="polite">
+                        <div>
+                            <p class="selected-label">Ausgewählter Truck</p>
+                            <strong id="selected-truck-name">Mercedes-Benz Actros</strong>
+                        </div>
+                        <p id="selected-truck-details">28 l / 100 km · effizienter Fernverkehr-LKW</p>
                     </div>
 
                     <p id="route-error" class="form-message" role="alert"></p>
@@ -119,6 +182,63 @@
                     <p id="duration" class="metric-value metric-value-small">-</p>
                     <p id="route-info" class="metric-note"></p>
                 </article>
+
+                <article class="metric-card">
+                    <div class="metric-label">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 15V9h3l2-3h6l2 3h3v6"/>
+                            <circle cx="7" cy="17" r="2"/>
+                            <circle cx="17" cy="17" r="2"/>
+                        </svg>
+                        Gewählter Truck
+                    </div>
+                    <p id="result-truck" class="metric-value metric-value-small">-</p>
+                    <p id="result-truck-info" class="metric-note"></p>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-label">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M7 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16"/>
+                            <path d="M7 9h9"/>
+                            <path d="M16 7h2l2 3v7a2 2 0 0 1-2 2h-2"/>
+                        </svg>
+                        Verbrauch
+                    </div>
+                    <p class="metric-value"><span id="fuel-liters">-</span><small>Liter</small></p>
+                    <p id="fuel-info" class="metric-note"></p>
+                </article>
+
+                <article class="metric-card metric-card-cost">
+                    <div class="metric-label">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M6 7h9a4 4 0 0 1 0 8H6"/>
+                            <path d="M6 11h9"/>
+                            <path d="M6 3v18"/>
+                        </svg>
+                        Geschätzte Kosten
+                    </div>
+                    <p id="cost" class="metric-value metric-value-small">-</p>
+                    <p id="cost-info" class="metric-note"></p>
+                </article>
+
+                <article class="metric-card recommendation-card">
+                    <div class="metric-label">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M12 3v3"/>
+                            <path d="M5.6 5.6 7.7 7.7"/>
+                            <path d="M3 12h3"/>
+                            <path d="M18 12h3"/>
+                            <path d="M16.3 7.7l2.1-2.1"/>
+                            <path d="M9 18h6"/>
+                            <path d="M10 21h4"/>
+                            <path d="M8 12a4 4 0 1 1 8 0c0 1.4-.7 2.4-1.6 3.3-.7.7-1.4 1.4-1.4 2.7h-2c0-1.3-.7-2-1.4-2.7C8.7 14.4 8 13.4 8 12Z"/>
+                        </svg>
+                        Intelligente Empfehlung
+                    </div>
+                    <p id="recommendation-title" class="recommendation-title">-</p>
+                    <p id="recommendation-text" class="metric-note"></p>
+                </article>
             </section>
 
             <section class="map-panel" aria-label="Karte">
@@ -128,7 +248,6 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <script src="js/routenplaner.js"></script>
 </body>
 </html>
