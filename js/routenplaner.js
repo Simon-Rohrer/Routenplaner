@@ -162,7 +162,8 @@
         start: null,
         ziel: null,
         autocompleteTimer: null,
-        activeSuggestionRequest: null
+        activeSuggestionRequest: null,
+        currentStep: 0
     };
 
     const elements = {};
@@ -176,6 +177,9 @@
     }
 
     function cacheElements() {
+        elements.newRouteButton = document.getElementById("new-route-btn");
+        elements.routeDialog = document.getElementById("route-dialog");
+        elements.dialogCloseButton = document.getElementById("dialog-close-btn");
         elements.form = document.getElementById("route-form");
         elements.startInput = document.getElementById("start");
         elements.zielInput = document.getElementById("ziel");
@@ -196,6 +200,10 @@
         elements.selectedTruckDetails = document.getElementById("selected-truck-details");
         elements.calculateButton = document.getElementById("calculate-btn");
         elements.clearButton = document.getElementById("clear-btn");
+        elements.wizardBackButton = document.getElementById("wizard-back-btn");
+        elements.wizardNextButton = document.getElementById("wizard-next-btn");
+        elements.wizardStepButtons = Array.from(document.querySelectorAll("[data-step-target]"));
+        elements.wizardPanels = Array.from(document.querySelectorAll("[data-step-panel]"));
         elements.results = document.getElementById("results-section");
         elements.distance = document.getElementById("distance");
         elements.duration = document.getElementById("duration");
@@ -240,6 +248,32 @@
     }
 
     function bindEvents() {
+        elements.newRouteButton.addEventListener("click", function () {
+            openRouteDialog(true);
+        });
+
+        elements.dialogCloseButton.addEventListener("click", closeRouteDialog);
+
+        elements.routeDialog.addEventListener("click", function (event) {
+            if (event.target === elements.routeDialog) {
+                closeRouteDialog();
+            }
+        });
+
+        elements.wizardStepButtons.forEach(function (button) {
+            button.addEventListener("click", function () {
+                setWizardStep(Number(button.dataset.stepTarget));
+            });
+        });
+
+        elements.wizardBackButton.addEventListener("click", function () {
+            setWizardStep(state.currentStep - 1);
+        });
+
+        elements.wizardNextButton.addEventListener("click", function () {
+            setWizardStep(state.currentStep + 1);
+        });
+
         elements.form.addEventListener("submit", function (event) {
             event.preventDefault();
             calculateRoute();
@@ -275,6 +309,12 @@
         elements.startInput.addEventListener("keydown", handleInputKeydown);
         elements.zielInput.addEventListener("keydown", handleInputKeydown);
 
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && !elements.routeDialog.hidden) {
+                closeRouteDialog();
+            }
+        });
+
         document.addEventListener("pointerdown", function (event) {
             if (!event.target.closest(".autocomplete-wrapper")) {
                 closeSuggestions();
@@ -282,6 +322,49 @@
         });
 
         updateSelectedTruckDetails();
+        setWizardStep(0);
+    }
+
+    function openRouteDialog(resetPlanner) {
+        if (resetPlanner) {
+            clearPlanner();
+        }
+
+        elements.routeDialog.hidden = false;
+        document.body.classList.add("dialog-open");
+        setWizardStep(0);
+
+        window.requestAnimationFrame(function () {
+            elements.startInput.focus();
+        });
+    }
+
+    function closeRouteDialog() {
+        elements.routeDialog.hidden = true;
+        document.body.classList.remove("dialog-open");
+        closeSuggestions();
+        elements.newRouteButton.focus();
+    }
+
+    function setWizardStep(nextStep) {
+        const maxStep = elements.wizardPanels.length - 1;
+        const safeStep = Math.min(Math.max(nextStep, 0), maxStep);
+
+        state.currentStep = safeStep;
+
+        elements.wizardPanels.forEach(function (panel, index) {
+            panel.classList.toggle("is-active", index === safeStep);
+        });
+
+        elements.wizardStepButtons.forEach(function (button, index) {
+            const isActive = index === safeStep;
+            button.classList.toggle("is-active", isActive);
+            button.setAttribute("aria-current", isActive ? "step" : "false");
+        });
+
+        elements.wizardBackButton.disabled = safeStep === 0;
+        elements.wizardNextButton.hidden = safeStep === maxStep;
+        elements.calculateButton.hidden = safeStep !== maxStep;
     }
 
     function handleInputKeydown(event) {
@@ -444,6 +527,7 @@
             state.ziel = ziel;
 
             await drawRoute(start, ziel);
+            closeRouteDialog();
         } catch (error) {
             showRouteError("Die Route konnte nicht berechnet werden. Bitte versuche es erneut.");
         } finally {
@@ -535,9 +619,9 @@
     function drawRouteLine(coordinates, isFallback) {
         const shadowLine = L.polyline(coordinates, {
             className: "route-line-shadow",
-            color: "#07111a",
-            opacity: 0.72,
-            weight: 13,
+            color: "#ffffff",
+            opacity: 0.86,
+            weight: 12,
             lineCap: "round",
             lineJoin: "round",
             interactive: false
@@ -545,14 +629,16 @@
 
         const routeLine = L.polyline(coordinates, {
             className: isFallback ? "route-line route-line-fallback" : "route-line",
-            color: isFallback ? "#f59e0b" : "#2dd4bf",
-            dashArray: isFallback ? "10 12" : null,
+            color: "#ef4444",
+            dashArray: isFallback ? "12 10" : null,
             opacity: 1,
-            weight: 6,
+            weight: 7,
             lineCap: "round",
             lineJoin: "round"
         }).addTo(state.map);
 
+        shadowLine.bringToFront();
+        routeLine.bringToFront();
         state.routeLayers = [shadowLine, routeLine];
     }
 
@@ -702,13 +788,36 @@
     }
 
     function renderSummary(plan) {
-        const start = elements.startInput.value.trim() || "Start";
-        const ziel = elements.zielInput.value.trim() || "Ziel";
+        const start = formatCompactAddressLabel(elements.startInput.value) || "Start";
+        const ziel = formatCompactAddressLabel(elements.zielInput.value) || "Ziel";
 
         elements.summaryRoute.textContent = `${start} nach ${ziel}`;
         elements.summaryPackage.textContent = `${plan.packageData.quantity} Paket(e), ${formatNumber(plan.packageData.totalWeightKg, 1)} kg`;
         elements.summaryVehicle.textContent = plan.plannedTruck.name;
         elements.summaryCost.textContent = formatCurrency(plan.totalCost);
+    }
+
+    function formatCompactAddressLabel(value) {
+        const trimmedValue = value.trim();
+
+        if (!trimmedValue) {
+            return "";
+        }
+
+        const parts = trimmedValue.split(",").map(function (part) {
+            return part.trim();
+        }).filter(Boolean);
+        const compactLabel = parts[0] || trimmedValue;
+
+        return shortenText(compactLabel, 32);
+    }
+
+    function shortenText(text, maxLength) {
+        if (text.length <= maxLength) {
+            return text;
+        }
+
+        return `${text.slice(0, maxLength - 3).trim()}...`;
     }
 
     function refreshCostPlanFromCurrentRoute() {
@@ -954,6 +1063,7 @@
         closeSuggestions();
         removeRouteLayers();
         updateSelectedTruckDetails();
+        setWizardStep(0);
 
         state.start = null;
         state.ziel = null;
