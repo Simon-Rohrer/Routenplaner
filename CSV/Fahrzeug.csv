@@ -1,1 +1,7 @@
-﻿Fahrzeug_ID;Modell;Stauraum_m3;Sprit_pro_km_EUR;Versicherung_Tag_EUR;Status
+Fahrzeug_ID;Modell;Stauraum_m3;Sprit_pro_km_EUR;Versicherung_Tag_EUR;Status
+vito;Mercedes-Benz Vito;6.0;0.1445;18.00;aktiv
+sprinter;Mercedes-Benz Sprinter;14.0;0.1785;22.00;aktiv
+crafter;Volkswagen Crafter;16.4;0.1836;24.00;aktiv
+daily-72;Iveco Daily 7,2 t;28.0;0.2635;35.00;aktiv
+man-tgl-75;MAN TGL 7,5 t;35.0;0.3060;42.00;aktiv
+atego-12;Mercedes-Benz Atego 12 t;44.0;0.3740;55.00;aktiv

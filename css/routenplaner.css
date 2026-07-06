@@ -408,7 +408,7 @@ select:focus {
 
 .control-grid {
     display: grid;
-    grid-template-columns: 1fr 0.8fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
 }
 
@@ -462,6 +462,15 @@ select:focus {
     color: var(--muted);
     font-size: 0.82rem;
     line-height: 1.45;
+}
+
+.data-source-status {
+    margin: -6px 0 16px;
+    padding: 10px 12px;
+    color: var(--muted-strong);
+    background: rgba(15, 23, 32, 0.62);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
 }
 
 .truck-options {

@@ -1,1 +1,2 @@
-﻿Fahrt_ID;Datum;Fahrzeug_ID;Fahrer_ID;Startort;Zielorte;Kosten_Gesamt_EUR
+Fahrt_ID;Datum;Fahrzeug_ID;Fahrer_ID;Startort;Zielorte;Kosten_Gesamt_EUR
+F-20260706-103903;2026-07-06;vito;fahrer-001;Stuttgart, Baden-Württemberg, Deutschland;Berlin, Deutschland;377,02
