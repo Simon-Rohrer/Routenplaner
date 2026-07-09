@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="PaketPilot Logistik GmbH: Kostenplaner für Lieferfahrten, Pakete, Fahrzeuge und BWL-Auswertung.">
+    <meta name="description" content="PaketPilot Logistik GmbH: Kostenplaner für Lieferfahrten mit KI-Routenheuristik, Paketprüfung und BWL-Auswertung.">
     <title>PaketPilot Logistik GmbH - Kostenplaner</title>
 
     <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <link rel="stylesheet" href="css/routenplaner.css?v=20260706-6">
+    <link rel="stylesheet" href="css/routenplaner.css?v=20260709-2">
 </head>
 <body>
     <div class="app-shell">
@@ -31,7 +31,7 @@
             <div class="header-actions">
                 <div class="service-pill">
                     <span class="status-dot" aria-hidden="true"></span>
-                    Routenplanung, Paketprüfung und BWL-Kosten
+                    KI-Routenheuristik · Paketprüfung · BWL-Kosten
                 </div>
                 <button id="new-route-btn" type="button" class="button button-primary header-action-button">
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -43,33 +43,33 @@
             </div>
         </header>
 
-        <section class="overview-windows" aria-label="Projektübersicht">
+        <section id="overview-windows" class="overview-windows" aria-label="So funktioniert der Planer">
             <article class="window-card">
                 <span class="window-number">01</span>
                 <div>
-                    <h2>Firmenfenster</h2>
-                    <p>PaketPilot Logistik GmbH plant Lieferfahrten mit klarer Kosten- und Nutzenrechnung.</p>
+                    <h2>Route planen</h2>
+                    <p>Start und bis zu acht Lieferorte eingeben. Die Nearest-Neighbor-Heuristik sortiert die Stopps automatisch.</p>
                 </div>
             </article>
             <article class="window-card">
                 <span class="window-number">02</span>
                 <div>
-                    <h2>Sendungsfenster</h2>
-                    <p>Paketmaße, Gewicht und Anzahl bestimmen, ob Transporter oder 7,5-Tonner sinnvoll sind.</p>
+                    <h2>Paket erfassen</h2>
+                    <p>Maße, Gewicht und Anzahl bestimmen, welche Fahrzeuge für die Sendung überhaupt in Frage kommen.</p>
                 </div>
             </article>
             <article class="window-card">
                 <span class="window-number">03</span>
                 <div>
-                    <h2>Fahrzeugfenster</h2>
-                    <p>Das kleinste passende Fahrzeug wird empfohlen, damit Leerraum und Kosten sinken.</p>
+                    <h2>Fahrzeug wählen</h2>
+                    <p>Automatische Empfehlung oder eigene Auswahl – immer mit direktem Kostenvergleich.</p>
                 </div>
             </article>
             <article class="window-card">
                 <span class="window-number">04</span>
                 <div>
-                    <h2>BWL-Fenster</h2>
-                    <p>Anschaffung, Wartung, Schulung, Personal und Nutzen werden pro Fahrt zusammengefasst.</p>
+                    <h2>BWL auswerten</h2>
+                    <p>Kosten und Nutzen pro Fahrt, dazu ein Fahrtenverlauf mit CSV-Export.</p>
                 </div>
             </article>
         </section>
@@ -80,7 +80,7 @@
                     <div>
                         <p class="eyebrow">Planungsfenster</p>
                         <h2 id="planner-title">Lieferung erfassen</h2>
-                        <p class="panel-subtitle">Route, Paket, Fahrzeug und Kostenbasis in vier klaren Schritten.</p>
+                        <p class="panel-subtitle">In vier Schritten von der Adresse zur fertigen Kosten- und Fahrzeugplanung.</p>
                     </div>
                     <button id="dialog-close-btn" type="button" class="icon-button" aria-label="Planungsfenster schließen">
                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -92,48 +92,50 @@
 
                 <div class="wizard-steps" aria-label="Planungsschritte">
                     <button type="button" class="wizard-step is-active" data-step-target="0">
-                        <span>01</span>
+                        <span data-step-number="01">01</span>
                         Route
                     </button>
                     <button type="button" class="wizard-step" data-step-target="1">
-                        <span>02</span>
+                        <span data-step-number="02">02</span>
                         Paket
                     </button>
                     <button type="button" class="wizard-step" data-step-target="2">
-                        <span>03</span>
+                        <span data-step-number="03">03</span>
                         Kosten
                     </button>
                     <button type="button" class="wizard-step" data-step-target="3">
-                        <span>04</span>
+                        <span data-step-number="04">04</span>
                         Fahrzeug
                     </button>
                 </div>
-                <p id="csv-status" class="form-hint data-source-status">CSV-Datenquelle wird geprüft.</p>
+                <p id="csv-status" class="form-hint data-source-status" aria-live="polite">Datenquelle wird geprüft.</p>
 
                 <form id="route-form" novalidate>
                     <div class="form-window wizard-panel is-active" data-step-panel="0">
-                        <div class="form-window-title">Fenster 1 · Route</div>
+                        <div class="form-window-title">Schritt 1 · Route</div>
                         <div class="form-group">
                             <label for="start">Start-Adresse</label>
                             <div class="autocomplete-wrapper">
-                                <input type="text" id="start" name="start" placeholder="z.B. Berlin, Deutschland" autocomplete="off" spellcheck="false">
+                                <input type="text" id="start" name="start" placeholder="z. B. Stuttgart, Deutschland" autocomplete="off" spellcheck="false">
                                 <ul id="start-suggestions" class="autocomplete-suggestions" aria-label="Start-Vorschläge"></ul>
                             </div>
                             <small id="start-error" class="field-error"></small>
                         </div>
 
-                        <div class="form-group">
-                            <label for="ziel">Ziel-Adresse</label>
-                            <div class="autocomplete-wrapper">
-                                <input type="text" id="ziel" name="ziel" placeholder="z.B. München, Deutschland" autocomplete="off" spellcheck="false">
-                                <ul id="ziel-suggestions" class="autocomplete-suggestions" aria-label="Ziel-Vorschläge"></ul>
-                            </div>
-                            <small id="ziel-error" class="field-error"></small>
-                        </div>
+                        <div id="stops-list"></div>
+
+                        <button id="add-stop-btn" type="button" class="add-stop-button">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M12 5v14"/>
+                                <path d="M5 12h14"/>
+                            </svg>
+                            <span>Lieferort hinzufügen</span>
+                        </button>
+                        <p class="form-hint">Bis zu 8 Lieferorte. Die Nearest-Neighbor-Heuristik bestimmt automatisch die günstigste Reihenfolge.</p>
                     </div>
 
                     <fieldset class="package-fieldset form-window wizard-panel" data-step-panel="1">
-                        <legend>Fenster 2 · Paket anlegen</legend>
+                        <legend>Schritt 2 · Paket anlegen</legend>
                         <div class="form-group">
                             <label for="package-type">Pakettyp aus CSV</label>
                             <select id="package-type" name="package-type"></select>
@@ -180,17 +182,35 @@
                     </fieldset>
 
                     <div class="form-window wizard-panel" data-step-panel="2">
-                        <div class="form-window-title">Fenster 3 · Kostenbasis</div>
-                        <div class="control-grid">
-                            <div class="form-group">
-                                <label for="priority">Priorität</label>
-                                <select id="priority" name="priority">
-                                    <option value="guenstig">Günstig</option>
-                                    <option value="effizient" selected>Effizient / ausgewogen</option>
-                                    <option value="schnell">Schnell</option>
-                                </select>
+                        <div class="form-window-title">Schritt 3 · Kostenbasis</div>
+                        <fieldset class="form-group priority-group">
+                            <legend>Priorität</legend>
+                            <div class="segmented-control" id="priority-options" role="radiogroup" aria-label="Priorität">
+                                <label>
+                                    <input type="radio" name="priority" value="guenstig">
+                                    <span>
+                                        <strong>Günstig</strong>
+                                        <small>niedrigste Kosten</small>
+                                    </span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="priority" value="effizient" checked>
+                                    <span>
+                                        <strong>Effizient</strong>
+                                        <small>ausgewogen</small>
+                                    </span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="priority" value="schnell">
+                                    <span>
+                                        <strong>Schnell</strong>
+                                        <small>kürzeste Zeit</small>
+                                    </span>
+                                </label>
                             </div>
+                        </fieldset>
 
+                        <div class="control-grid control-grid-2">
                             <div class="form-group">
                                 <label for="diesel-price">Dieselpreis pro Liter</label>
                                 <div class="input-with-unit">
@@ -207,64 +227,17 @@
                     </div>
 
                     <fieldset class="truck-fieldset form-window wizard-panel" data-step-panel="3">
-                        <legend>Fenster 4 · Fahrzeugauswahl</legend>
-                        <div class="truck-options" id="truck-options">
-                            <label class="truck-option">
-                                <input type="radio" name="truck" value="vito">
-                                <span class="truck-option-content">
-                                    <span class="truck-option-name">Mercedes-Benz Vito</span>
-                                    <span class="truck-option-meta">900 kg · 6,0 m³ · 8,5 l / 100 km</span>
-                                </span>
-                            </label>
-
-                            <label class="truck-option">
-                                <input type="radio" name="truck" value="sprinter" checked>
-                                <span class="truck-option-content">
-                                    <span class="truck-option-name">Mercedes-Benz Sprinter</span>
-                                    <span class="truck-option-meta">1.200 kg · 14,0 m³ · 10,5 l / 100 km</span>
-                                </span>
-                            </label>
-
-                            <label class="truck-option">
-                                <input type="radio" name="truck" value="crafter">
-                                <span class="truck-option-content">
-                                    <span class="truck-option-name">Volkswagen Crafter</span>
-                                    <span class="truck-option-meta">1.300 kg · 16,4 m³ · 10,8 l / 100 km</span>
-                                </span>
-                            </label>
-
-                            <label class="truck-option">
-                                <input type="radio" name="truck" value="daily-72">
-                                <span class="truck-option-content">
-                                    <span class="truck-option-name">Iveco Daily 7,2 t</span>
-                                    <span class="truck-option-meta">3.500 kg · 28,0 m³ · 15,5 l / 100 km</span>
-                                </span>
-                            </label>
-
-                            <label class="truck-option">
-                                <input type="radio" name="truck" value="man-tgl-75">
-                                <span class="truck-option-content">
-                                    <span class="truck-option-name">MAN TGL 7,5 t</span>
-                                    <span class="truck-option-meta">3.000 kg · 35,0 m³ · 18,0 l / 100 km</span>
-                                </span>
-                            </label>
-
-                            <label class="truck-option">
-                                <input type="radio" name="truck" value="atego-12">
-                                <span class="truck-option-content">
-                                    <span class="truck-option-name">Mercedes-Benz Atego 12 t</span>
-                                    <span class="truck-option-meta">6.000 kg · 44,0 m³ · 22,0 l / 100 km</span>
-                                </span>
-                            </label>
-                        </div>
+                        <legend>Schritt 4 · Fahrzeugauswahl</legend>
+                        <div class="truck-options" id="truck-options"></div>
+                        <p class="form-hint">Mit „Automatische Empfehlung" wählt die Planungslogik das kleinste passende Fahrzeug. Bei eigener Auswahl wird der Kostenunterschied zur Empfehlung angezeigt.</p>
                     </fieldset>
 
                     <div class="selected-truck-card" aria-live="polite">
                         <div>
                             <p class="selected-label">Ausgewähltes Fahrzeug</p>
-                            <strong id="selected-truck-name">Mercedes-Benz Sprinter</strong>
+                            <strong id="selected-truck-name">Automatische Empfehlung</strong>
                         </div>
-                        <p id="selected-truck-details">10,5 l / 100 km · 1.200 kg Nutzlast · 14,0 m³ Laderaum</p>
+                        <p id="selected-truck-details">Die Planungslogik wählt das kleinste passende Fahrzeug für Paket und Priorität.</p>
                     </div>
 
                     <p id="route-error" class="form-message" role="alert"></p>
@@ -277,12 +250,12 @@
                             </svg>
                             <span>Zurück</span>
                         </button>
-                        <button id="wizard-next-btn" type="button" class="button button-secondary">
+                        <button id="wizard-next-btn" type="button" class="button button-primary">
+                            <span>Weiter</span>
                             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <path d="M5 12h14"/>
                                 <path d="m13 6 6 6-6 6"/>
                             </svg>
-                            <span>Weiter</span>
                         </button>
                         <button id="calculate-btn" type="submit" class="button button-primary">
                             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -291,7 +264,7 @@
                             </svg>
                             <span>Route berechnen</span>
                         </button>
-                        <button id="clear-btn" type="button" class="button button-secondary">
+                        <button id="clear-btn" type="button" class="button button-ghost">
                             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                                 <path d="M4 7h16"/>
                                 <path d="M10 11v6"/>
@@ -306,121 +279,121 @@
             </section>
         </div>
 
-        <main class="layout-grid">
-            <section id="results-section" class="metrics-grid" aria-label="Routendaten" hidden>
-                <article class="metric-card summary-card">
-                    <div class="metric-label">
+        <main class="results-area">
+            <section id="results-hero" class="panel results-hero" hidden aria-label="Routenübersicht">
+                <div class="hero-route">
+                    <p class="eyebrow">Geplante Route</p>
+                    <ol id="route-chain" class="route-chain"></ol>
+                    <p id="heuristic-badge" class="heuristic-badge">
                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M4 5h16"/>
-                            <path d="M4 12h16"/>
-                            <path d="M4 19h16"/>
+                            <path d="M12 3v3"/>
+                            <path d="M18.4 5.6 16.3 7.7"/>
+                            <path d="M21 12h-3"/>
+                            <path d="M5.6 5.6 7.7 7.7"/>
+                            <path d="M3 12h3"/>
+                            <path d="M12 21a6 6 0 0 0 6-6c0-3.3-2.7-4.6-6-9-3.3 4.4-6 5.7-6 9a6 6 0 0 0 6 6Z"/>
                         </svg>
-                        Kompaktübersicht
+                        <span id="heuristic-badge-text">-</span>
+                    </p>
+                </div>
+                <div class="kpi-row">
+                    <div class="kpi kpi-primary">
+                        <span class="kpi-label">Gesamtkosten</span>
+                        <strong class="kpi-value kpi-value-text" id="cost">-</strong>
+                        <span id="cost-info" class="kpi-note"></span>
                     </div>
-                    <div class="summary-list">
-                        <div>
-                            <span>Route</span>
-                            <strong id="summary-route">-</strong>
+                    <div class="kpi">
+                        <span class="kpi-label">Entfernung</span>
+                        <strong class="kpi-value"><span id="distance">-</span><small>km</small></strong>
+                    </div>
+                    <div class="kpi">
+                        <span class="kpi-label">Fahrzeit</span>
+                        <strong class="kpi-value kpi-value-text" id="duration">-</strong>
+                    </div>
+                    <div class="kpi">
+                        <span class="kpi-label">Verbrauch</span>
+                        <strong class="kpi-value"><span id="fuel-liters">-</span><small>Liter</small></strong>
+                    </div>
+                </div>
+            </section>
+
+            <div id="map-row" class="map-row">
+                <section class="map-panel" aria-label="Karte">
+                    <div id="map"></div>
+                    <div id="map-empty-state" class="map-empty-state">
+                        <div class="map-empty-card">
+                            <div class="map-empty-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" focusable="false">
+                                    <circle cx="6" cy="19" r="2.4"/>
+                                    <circle cx="18" cy="5" r="2.4"/>
+                                    <path d="M8 19h6a4 4 0 0 0 0-8H10a4 4 0 0 1 0-8h5.6"/>
+                                </svg>
+                            </div>
+                            <h3>Noch keine Route geplant</h3>
+                            <p>Lege eine Route mit bis zu acht Lieferorten an – die KI-Heuristik sortiert die Stopps und berechnet Kosten und Fahrzeugempfehlung.</p>
+                            <button id="empty-state-btn" type="button" class="button button-primary">
+                                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                    <path d="M12 5v14"/>
+                                    <path d="M5 12h14"/>
+                                </svg>
+                                <span>Erste Route anlegen</span>
+                            </button>
                         </div>
-                        <div>
-                            <span>Sendung</span>
-                            <strong id="summary-package">-</strong>
+                    </div>
+                </section>
+
+                <aside id="results-side" class="results-side" hidden aria-label="Details zur Planung">
+                    <article class="side-card heuristic-card">
+                        <div class="metric-label">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M12 3v3"/>
+                                <path d="M18.4 5.6 16.3 7.7"/>
+                                <path d="M21 12h-3"/>
+                                <path d="M5.6 5.6 7.7 7.7"/>
+                                <path d="M3 12h3"/>
+                                <path d="M12 21a6 6 0 0 0 6-6c0-3.3-2.7-4.6-6-9-3.3 4.4-6 5.7-6 9a6 6 0 0 0 6 6Z"/>
+                            </svg>
+                            KI-Routenoptimierung
                         </div>
-                        <div>
-                            <span>Fahrzeug</span>
-                            <strong id="summary-vehicle">-</strong>
+                        <p id="distance-info" class="side-text"></p>
+                        <div id="heuristic-visual" class="heuristic-visual"></div>
+                        <p id="route-info" class="metric-note"></p>
+                    </article>
+
+                    <article class="side-card">
+                        <div class="metric-label">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M4 15V9h3l2-3h6l2 3h3v6"/>
+                                <circle cx="7" cy="17" r="2"/>
+                                <circle cx="17" cy="17" r="2"/>
+                            </svg>
+                            Fahrzeug &amp; Empfehlung
                         </div>
-                        <div>
-                            <span>Fahrer</span>
-                            <strong id="summary-driver">-</strong>
+                        <p id="result-truck" class="side-strong">-</p>
+                        <p id="result-truck-info" class="metric-note"></p>
+                        <p class="side-driver">Fahrer: <strong id="result-driver">-</strong></p>
+                        <hr class="side-divider">
+                        <p id="recommendation-title" class="recommendation-title">-</p>
+                        <p id="recommendation-text" class="metric-note"></p>
+                    </article>
+
+                    <article class="side-card">
+                        <div class="metric-label">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M4 8 12 4l8 4-8 4-8-4Z"/>
+                                <path d="M4 8v8l8 4 8-4V8"/>
+                                <path d="M12 12v8"/>
+                            </svg>
+                            Sendung
                         </div>
-                        <div>
-                            <span>Gesamtkosten</span>
-                            <strong id="summary-cost">-</strong>
-                        </div>
-                    </div>
-                </article>
+                        <p id="result-package" class="side-strong">-</p>
+                        <p id="result-load" class="metric-note"></p>
+                    </article>
+                </aside>
+            </div>
 
-                <article class="metric-card metric-card-primary">
-                    <div class="metric-label">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M4 19V5"/>
-                            <path d="M20 19V5"/>
-                            <path d="M8 8h8"/>
-                            <path d="M8 16h8"/>
-                            <path d="M7 5h10"/>
-                            <path d="M7 19h10"/>
-                        </svg>
-                        Entfernung
-                    </div>
-                    <p class="metric-value"><span id="distance">-</span><small>km</small></p>
-                </article>
-
-                <article class="metric-card">
-                    <div class="metric-label">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <circle cx="12" cy="12" r="8"/>
-                            <path d="M12 8v5l3 2"/>
-                        </svg>
-                        Fahrzeit
-                    </div>
-                    <p id="duration" class="metric-value metric-value-small">-</p>
-                    <p id="route-info" class="metric-note"></p>
-                </article>
-
-                <article class="metric-card">
-                    <div class="metric-label">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M4 15V9h3l2-3h6l2 3h3v6"/>
-                            <circle cx="7" cy="17" r="2"/>
-                            <circle cx="17" cy="17" r="2"/>
-                        </svg>
-                        Eingesetzter LKW
-                    </div>
-                    <p id="result-truck" class="metric-value metric-value-small">-</p>
-                    <p id="result-truck-info" class="metric-note"></p>
-                </article>
-
-                <article class="metric-card">
-                    <div class="metric-label">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M4 8 12 4l8 4-8 4-8-4Z"/>
-                            <path d="M4 8v8l8 4 8-4V8"/>
-                            <path d="M12 12v8"/>
-                        </svg>
-                        Paketdaten
-                    </div>
-                    <p id="result-package" class="metric-value metric-value-small">-</p>
-                    <p id="result-load" class="metric-note"></p>
-                </article>
-
-                <article class="metric-card">
-                    <div class="metric-label">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M7 21V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v16"/>
-                            <path d="M7 9h9"/>
-                            <path d="M16 7h2l2 3v7a2 2 0 0 1-2 2h-2"/>
-                        </svg>
-                        Verbrauch
-                    </div>
-                    <p class="metric-value"><span id="fuel-liters">-</span><small>Liter</small></p>
-                    <p id="fuel-info" class="metric-note"></p>
-                </article>
-
-                <article class="metric-card metric-card-cost">
-                    <div class="metric-label">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M6 7h9a4 4 0 0 1 0 8H6"/>
-                            <path d="M6 11h9"/>
-                            <path d="M6 3v18"/>
-                        </svg>
-                        Kostenübersicht
-                    </div>
-                    <p id="cost" class="metric-value metric-value-small">-</p>
-                    <p id="cost-info" class="metric-note"></p>
-                </article>
-
-                <article class="metric-card bwl-card">
+            <section id="results-details" class="details-grid" hidden aria-label="BWL-Auswertung">
+                <article class="panel detail-card">
                     <div class="metric-label">
                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <path d="M4 19V5"/>
@@ -429,49 +402,73 @@
                             <path d="M16 17v-4"/>
                             <path d="M20 19H4"/>
                         </svg>
-                        BWL-Übersicht: Kosten
+                        BWL-Übersicht: Kosten pro Fahrt
                     </div>
-                    <ul id="bwl-costs" class="breakdown-list"></ul>
+                    <ul id="bwl-costs" class="breakdown-list breakdown-bars"></ul>
+                    <p id="fuel-info" class="metric-note detail-footnote"></p>
                 </article>
 
-                <article class="metric-card bwl-card">
+                <article class="panel detail-card">
                     <div class="metric-label">
                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <path d="m4 16 5-5 4 4 7-8"/>
                             <path d="M15 7h5v5"/>
                             <path d="M4 20h16"/>
                         </svg>
-                        BWL-Übersicht: Nutzen
+                        BWL-Übersicht: Nutzen der KI-Planung
                     </div>
-                    <ul id="bwl-benefits" class="breakdown-list"></ul>
+                    <ul id="bwl-benefits" class="breakdown-list benefit-list"></ul>
                 </article>
-
-                <article class="metric-card recommendation-card">
-                    <div class="metric-label">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d="M12 3v3"/>
-                            <path d="M5.6 5.6 7.7 7.7"/>
-                            <path d="M3 12h3"/>
-                            <path d="M18 12h3"/>
-                            <path d="M16.3 7.7l2.1-2.1"/>
-                            <path d="M9 18h6"/>
-                            <path d="M10 21h4"/>
-                            <path d="M8 12a4 4 0 1 1 8 0c0 1.4-.7 2.4-1.6 3.3-.7.7-1.4 1.4-1.4 2.7h-2c0-1.3-.7-2-1.4-2.7C8.7 14.4 8 13.4 8 12Z"/>
-                        </svg>
-                        Planungsempfehlung
-                    </div>
-                    <p id="recommendation-title" class="recommendation-title">-</p>
-                    <p id="recommendation-text" class="metric-note"></p>
-                </article>
-            </section>
-
-            <section class="map-panel" aria-label="Karte">
-                <div id="map"></div>
             </section>
         </main>
+
+        <section class="panel trip-log-panel" aria-label="Fahrtenverlauf">
+            <div class="trip-log-header">
+                <div>
+                    <p class="eyebrow">Fahrtenverlauf</p>
+                    <h2>Gespeicherte Fahrten</h2>
+                    <p class="panel-subtitle" id="trip-log-hint">Fahrten werden im Browser gespeichert und lassen sich jederzeit als CSV exportieren.</p>
+                </div>
+                <div class="trip-log-actions">
+                    <span id="trip-count" class="trip-count-badge">0 Fahrten</span>
+                    <button id="trip-download-btn" type="button" class="button button-secondary button-small" disabled>
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M12 4v12"/>
+                            <path d="m7 11 5 5 5-5"/>
+                            <path d="M5 20h14"/>
+                        </svg>
+                        <span>CSV herunterladen</span>
+                    </button>
+                    <button id="trip-clear-btn" type="button" class="button button-ghost button-small" disabled>
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M4 7h16"/>
+                            <path d="M10 11v6"/>
+                            <path d="M14 11v6"/>
+                            <path d="M6 7l1 14h10l1-14"/>
+                            <path d="M9 7V4h6v3"/>
+                        </svg>
+                        <span>Leeren</span>
+                    </button>
+                </div>
+            </div>
+            <div class="trip-table-wrapper">
+                <table class="trip-table">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Route</th>
+                            <th>Fahrzeug</th>
+                            <th>Fahrer</th>
+                            <th class="align-right">Kosten</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trip-log-body"></tbody>
+                </table>
+            </div>
+        </section>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="js/routenplaner.js?v=20260706-6"></script>
+    <script src="js/routenplaner.js?v=20260709-2"></script>
 </body>
 </html>

@@ -2,6 +2,23 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Python: Launch PaketPilot (server.py)",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/Routenplaner/server.py",
+      "cwd": "${workspaceFolder}/Routenplaner",
+      "console": "integratedTerminal",
+      "env": {
+        "PORT": "5500"
+      },
+      "justMyCode": true
+    }
+  ]
+}
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
       "name": "Projekt lokal starten",
       "type": "node",
       "request": "launch",
