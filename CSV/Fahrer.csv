@@ -1,1 +1,5 @@
-﻿Fahrer_ID;Name;Stundenlohn_EUR;Status
+Fahrer_ID;Name;Stundenlohn_EUR;Status
+fahrer-001;Simon Keller;28.00;aktiv
+fahrer-002;Marcel Bauer;30.00;aktiv
+fahrer-003;Sebastian Weber;32.00;aktiv
+fahrer-004;Aushilfe Logistik;24.00;inaktiv

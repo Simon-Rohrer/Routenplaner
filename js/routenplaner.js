@@ -6,6 +6,7 @@
 
     const ROUTING_SERVICE_URL = "https://router.project-osrm.org/route/v1";
     const NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search";
+    const DEFAULT_DIESEL_PRICE = 1.70;
 
     const VEHICLES = [
         {
@@ -136,6 +137,45 @@
         }
     ];
 
+    const DEFAULT_DRIVERS = [
+        {
+            id: "fahrer-001",
+            name: "Simon Keller",
+            hourlyRate: 28,
+            status: "aktiv"
+        },
+        {
+            id: "fahrer-002",
+            name: "Marcel Bauer",
+            hourlyRate: 30,
+            status: "aktiv"
+        },
+        {
+            id: "fahrer-003",
+            name: "Sebastian Weber",
+            hourlyRate: 32,
+            status: "aktiv"
+        }
+    ];
+
+    const DEFAULT_PACKAGE_TYPES = [
+        {
+            type: "Manuelle Eingabe",
+            volumeM3: null,
+            baseWeightKg: null
+        },
+        {
+            type: "Kleinpaket",
+            volumeM3: 0.03,
+            baseWeightKg: 5
+        },
+        {
+            type: "Europalette",
+            volumeM3: 1.2,
+            baseWeightKg: 250
+        }
+    ];
+
     const PRIORITIES = {
         guenstig: {
             label: "günstig",
@@ -162,7 +202,12 @@
         start: null,
         ziel: null,
         autocompleteTimer: null,
-        activeSuggestionRequest: null
+        activeSuggestionRequest: null,
+        currentStep: 0,
+        drivers: DEFAULT_DRIVERS.slice(),
+        packageTypes: DEFAULT_PACKAGE_TYPES.slice(),
+        csvWriteEnabled: false,
+        csvSourceLabel: "Fallback-Daten"
     };
 
     const elements = {};
@@ -171,11 +216,18 @@
 
     function initApp() {
         cacheElements();
+        renderTruckOptions("sprinter");
+        renderDriverOptions();
+        renderPackageTypeOptions();
         initMap();
         bindEvents();
+        loadCsvData();
     }
 
     function cacheElements() {
+        elements.newRouteButton = document.getElementById("new-route-btn");
+        elements.routeDialog = document.getElementById("route-dialog");
+        elements.dialogCloseButton = document.getElementById("dialog-close-btn");
         elements.form = document.getElementById("route-form");
         elements.startInput = document.getElementById("start");
         elements.zielInput = document.getElementById("ziel");
@@ -189,13 +241,19 @@
         elements.packageHeight = document.getElementById("package-height");
         elements.packageWeight = document.getElementById("package-weight");
         elements.packageQuantity = document.getElementById("package-quantity");
+        elements.packageType = document.getElementById("package-type");
         elements.priority = document.getElementById("priority");
         elements.dieselPrice = document.getElementById("diesel-price");
+        elements.driverSelect = document.getElementById("driver");
         elements.truckOptions = document.getElementById("truck-options");
         elements.selectedTruckName = document.getElementById("selected-truck-name");
         elements.selectedTruckDetails = document.getElementById("selected-truck-details");
         elements.calculateButton = document.getElementById("calculate-btn");
         elements.clearButton = document.getElementById("clear-btn");
+        elements.wizardBackButton = document.getElementById("wizard-back-btn");
+        elements.wizardNextButton = document.getElementById("wizard-next-btn");
+        elements.wizardStepButtons = Array.from(document.querySelectorAll("[data-step-target]"));
+        elements.wizardPanels = Array.from(document.querySelectorAll("[data-step-panel]"));
         elements.results = document.getElementById("results-section");
         elements.distance = document.getElementById("distance");
         elements.duration = document.getElementById("duration");
@@ -207,6 +265,7 @@
         elements.summaryRoute = document.getElementById("summary-route");
         elements.summaryPackage = document.getElementById("summary-package");
         elements.summaryVehicle = document.getElementById("summary-vehicle");
+        elements.summaryDriver = document.getElementById("summary-driver");
         elements.summaryCost = document.getElementById("summary-cost");
         elements.fuelLiters = document.getElementById("fuel-liters");
         elements.fuelInfo = document.getElementById("fuel-info");
@@ -216,6 +275,7 @@
         elements.bwlBenefits = document.getElementById("bwl-benefits");
         elements.recommendationTitle = document.getElementById("recommendation-title");
         elements.recommendationText = document.getElementById("recommendation-text");
+        elements.csvStatus = document.getElementById("csv-status");
     }
 
     function initMap() {
@@ -240,6 +300,32 @@
     }
 
     function bindEvents() {
+        elements.newRouteButton.addEventListener("click", function () {
+            openRouteDialog(true);
+        });
+
+        elements.dialogCloseButton.addEventListener("click", closeRouteDialog);
+
+        elements.routeDialog.addEventListener("click", function (event) {
+            if (event.target === elements.routeDialog) {
+                closeRouteDialog();
+            }
+        });
+
+        elements.wizardStepButtons.forEach(function (button) {
+            button.addEventListener("click", function () {
+                setWizardStep(Number(button.dataset.stepTarget));
+            });
+        });
+
+        elements.wizardBackButton.addEventListener("click", function () {
+            setWizardStep(state.currentStep - 1);
+        });
+
+        elements.wizardNextButton.addEventListener("click", function () {
+            setWizardStep(state.currentStep + 1);
+        });
+
         elements.form.addEventListener("submit", function (event) {
             event.preventDefault();
             calculateRoute();
@@ -252,6 +338,8 @@
         });
         elements.priority.addEventListener("change", refreshCostPlanFromCurrentRoute);
         elements.dieselPrice.addEventListener("input", refreshCostPlanFromCurrentRoute);
+        elements.driverSelect.addEventListener("change", refreshCostPlanFromCurrentRoute);
+        elements.packageType.addEventListener("change", applySelectedPackageType);
         [
             elements.packageLength,
             elements.packageWidth,
@@ -275,6 +363,12 @@
         elements.startInput.addEventListener("keydown", handleInputKeydown);
         elements.zielInput.addEventListener("keydown", handleInputKeydown);
 
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && !elements.routeDialog.hidden) {
+                closeRouteDialog();
+            }
+        });
+
         document.addEventListener("pointerdown", function (event) {
             if (!event.target.closest(".autocomplete-wrapper")) {
                 closeSuggestions();
@@ -282,6 +376,366 @@
         });
 
         updateSelectedTruckDetails();
+        setWizardStep(0);
+    }
+
+    function openRouteDialog(resetPlanner) {
+        if (resetPlanner) {
+            clearPlanner();
+        }
+
+        elements.routeDialog.hidden = false;
+        document.body.classList.add("dialog-open");
+        setWizardStep(0);
+
+        window.requestAnimationFrame(function () {
+            elements.startInput.focus();
+        });
+    }
+
+    function closeRouteDialog() {
+        elements.routeDialog.hidden = true;
+        document.body.classList.remove("dialog-open");
+        closeSuggestions();
+        elements.newRouteButton.focus();
+    }
+
+    function setWizardStep(nextStep) {
+        const maxStep = elements.wizardPanels.length - 1;
+        const safeStep = Math.min(Math.max(nextStep, 0), maxStep);
+
+        state.currentStep = safeStep;
+
+        elements.wizardPanels.forEach(function (panel, index) {
+            panel.classList.toggle("is-active", index === safeStep);
+        });
+
+        elements.wizardStepButtons.forEach(function (button, index) {
+            const isActive = index === safeStep;
+            button.classList.toggle("is-active", isActive);
+            button.setAttribute("aria-current", isActive ? "step" : "false");
+        });
+
+        elements.wizardBackButton.disabled = safeStep === 0;
+        elements.wizardNextButton.hidden = safeStep === maxStep;
+        elements.calculateButton.hidden = safeStep !== maxStep;
+    }
+
+    async function loadCsvData() {
+        setCsvStatus("CSV-Datenquelle wird geladen.");
+
+        try {
+            const response = await fetch("api/csv", {
+                headers: {
+                    Accept: "application/json"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error("CSV-API nicht erreichbar.");
+            }
+
+            const data = await response.json();
+            applyCsvData(data, true);
+            setCsvStatus("CSV-Daten aktiv: Lesen und Schreiben ist verbunden.");
+        } catch (apiError) {
+            try {
+                const data = await loadStaticCsvData();
+                applyCsvData(data, false);
+                setCsvStatus("CSV-Daten gelesen. Schreiben benötigt den lokalen server.py.");
+            } catch (staticError) {
+                state.csvWriteEnabled = false;
+                state.csvSourceLabel = "Fallback-Daten";
+                setCsvStatus("CSV-Daten konnten nicht geladen werden. Fallback-Daten aktiv.");
+            }
+        }
+    }
+
+    async function loadStaticCsvData() {
+        const [fahrer, fahrzeuge, pakete, fahrten] = await Promise.all([
+            fetchCsvRows("CSV/Fahrer.csv"),
+            fetchCsvRows("CSV/Fahrzeug.csv"),
+            fetchCsvRows("CSV/Paket.csv"),
+            fetchCsvRows("CSV/Fahrtenverlauf.csv")
+        ]);
+
+        return {
+            fahrer,
+            fahrzeuge,
+            pakete,
+            fahrten
+        };
+    }
+
+    async function fetchCsvRows(path) {
+        const response = await fetch(path);
+
+        if (!response.ok) {
+            throw new Error(`CSV konnte nicht geladen werden: ${path}`);
+        }
+
+        return parseCsv(await response.text());
+    }
+
+    function parseCsv(csvText) {
+        const rows = csvText.replace(/^\uFEFF/, "").split(/\r?\n/).filter(function (line) {
+            return line.trim().length > 0;
+        });
+
+        if (!rows.length) {
+            return [];
+        }
+
+        const headers = splitCsvLine(rows[0]);
+
+        return rows.slice(1).map(function (line) {
+            const values = splitCsvLine(line);
+            return headers.reduce(function (row, header, index) {
+                row[header] = values[index] || "";
+                return row;
+            }, {});
+        });
+    }
+
+    function splitCsvLine(line) {
+        const values = [];
+        let currentValue = "";
+        let isQuoted = false;
+
+        for (let index = 0; index < line.length; index += 1) {
+            const char = line[index];
+            const nextChar = line[index + 1];
+
+            if (char === "\"" && isQuoted && nextChar === "\"") {
+                currentValue += "\"";
+                index += 1;
+                continue;
+            }
+
+            if (char === "\"") {
+                isQuoted = !isQuoted;
+                continue;
+            }
+
+            if (char === ";" && !isQuoted) {
+                values.push(currentValue);
+                currentValue = "";
+                continue;
+            }
+
+            currentValue += char;
+        }
+
+        values.push(currentValue);
+        return values;
+    }
+
+    function applyCsvData(data, canWrite) {
+        const mappedVehicles = (data.fahrzeuge || []).map(mapCsvVehicle).filter(Boolean);
+        const activeVehicles = mappedVehicles.filter(function (vehicle) {
+            return vehicle.status !== "inaktiv";
+        });
+        const mappedDrivers = (data.fahrer || []).map(mapCsvDriver).filter(Boolean);
+        const activeDrivers = mappedDrivers.filter(function (driver) {
+            return driver.status !== "inaktiv";
+        });
+        const mappedPackageTypes = (data.pakete || []).map(mapCsvPackageType).filter(Boolean);
+
+        if (activeVehicles.length) {
+            VEHICLES.splice(0, VEHICLES.length, ...activeVehicles);
+            renderTruckOptions(getSelectedTruck().id);
+        }
+
+        if (activeDrivers.length) {
+            state.drivers = activeDrivers;
+            renderDriverOptions();
+        }
+
+        if (mappedPackageTypes.length) {
+            state.packageTypes = [
+                {
+                    type: "Manuelle Eingabe",
+                    volumeM3: null,
+                    baseWeightKg: null
+                },
+                ...mappedPackageTypes
+            ];
+            renderPackageTypeOptions();
+        }
+
+        state.csvWriteEnabled = canWrite;
+        state.csvSourceLabel = canWrite ? "CSV-API" : "CSV-Dateien";
+        updateSelectedTruckDetails();
+        refreshCostPlanFromCurrentRoute();
+    }
+
+    function mapCsvVehicle(row) {
+        const id = String(row.Fahrzeug_ID || "").trim();
+        const baseVehicle = VEHICLES.find(function (vehicle) {
+            return vehicle.id === id;
+        });
+        const volumeM3 = parseCsvNumber(row.Stauraum_m3);
+        const fuelCostPerKm = parseCsvNumber(row.Sprit_pro_km_EUR);
+        const insurancePerDay = parseCsvNumber(row.Versicherung_Tag_EUR);
+
+        if (!id || !String(row.Modell || "").trim()) {
+            return null;
+        }
+
+        return {
+            ...(baseVehicle || createVehicleFallback(id, volumeM3)),
+            id,
+            name: String(row.Modell).trim(),
+            volumeM3: Number.isFinite(volumeM3) ? volumeM3 : (baseVehicle ? baseVehicle.volumeM3 : 8),
+            consumption: Number.isFinite(fuelCostPerKm) && fuelCostPerKm > 0
+                ? fuelCostPerKm / DEFAULT_DIESEL_PRICE * 100
+                : (baseVehicle ? baseVehicle.consumption : 11),
+            insurancePerDay: Number.isFinite(insurancePerDay) ? insurancePerDay : 0,
+            status: String(row.Status || "aktiv").trim().toLowerCase()
+        };
+    }
+
+    function createVehicleFallback(id, volumeM3) {
+        const safeVolume = Number.isFinite(volumeM3) && volumeM3 > 0 ? volumeM3 : 8;
+        const sideCm = Math.max(120, Math.round(Math.cbrt(safeVolume) * 100));
+
+        return {
+            id,
+            name: id,
+            category: "CSV-Fahrzeug",
+            consumption: 11,
+            payloadKg: Math.max(600, Math.round(safeVolume * 180)),
+            volumeM3: safeVolume,
+            cargoLengthCm: sideCm,
+            cargoWidthCm: Math.max(160, Math.round(sideCm * 0.75)),
+            cargoHeightCm: Math.max(140, Math.round(sideCm * 0.75)),
+            purchaseCost: 52000,
+            maintenancePerYear: 3200,
+            trainingCost: 750,
+            personnelHourlyRate: 29,
+            description: "Fahrzeug aus CSV-Datei",
+            strength: "direkt aus der Fahrzeugliste übernommen",
+            speedScore: 7,
+            annualTrips: 520,
+            depreciationYears: 6,
+            trainingYears: 3
+        };
+    }
+
+    function mapCsvDriver(row) {
+        const id = String(row.Fahrer_ID || "").trim();
+        const name = String(row.Name || "").trim();
+        const hourlyRate = parseCsvNumber(row.Stundenlohn_EUR);
+
+        if (!id || !name || !Number.isFinite(hourlyRate)) {
+            return null;
+        }
+
+        return {
+            id,
+            name,
+            hourlyRate,
+            status: String(row.Status || "aktiv").trim().toLowerCase()
+        };
+    }
+
+    function mapCsvPackageType(row) {
+        const type = String(row.Typ || "").trim();
+        const volumeM3 = parseCsvNumber(row.Volumen_m3);
+        const baseWeightKg = parseCsvNumber(row.Basis_Gewicht_kg);
+
+        if (!type || !Number.isFinite(volumeM3) || !Number.isFinite(baseWeightKg)) {
+            return null;
+        }
+
+        return {
+            type,
+            volumeM3,
+            baseWeightKg
+        };
+    }
+
+    function parseCsvNumber(value) {
+        return Number(String(value || "").replace(",", "."));
+    }
+
+    function renderTruckOptions(selectedTruckId) {
+        const preferredTruckId = selectedTruckId || "sprinter";
+        elements.truckOptions.innerHTML = "";
+
+        VEHICLES.forEach(function (truck, index) {
+            const label = document.createElement("label");
+            const input = document.createElement("input");
+            const content = document.createElement("span");
+            const name = document.createElement("span");
+            const meta = document.createElement("span");
+
+            label.className = "truck-option";
+            input.type = "radio";
+            input.name = "truck";
+            input.value = truck.id;
+            input.checked = truck.id === preferredTruckId || (!VEHICLES.some(function (vehicle) {
+                return vehicle.id === preferredTruckId;
+            }) && index === 0);
+            content.className = "truck-option-content";
+            name.className = "truck-option-name";
+            meta.className = "truck-option-meta";
+            name.textContent = truck.name;
+            meta.textContent = `${formatNumber(truck.payloadKg, 0)} kg · ${formatNumber(truck.volumeM3, 1)} m³ · ${formatNumber(truck.consumption, 1)} l / 100 km`;
+            content.append(name, meta);
+            label.append(input, content);
+            elements.truckOptions.appendChild(label);
+        });
+    }
+
+    function renderDriverOptions() {
+        elements.driverSelect.innerHTML = "";
+
+        state.drivers.forEach(function (driver, index) {
+            const option = document.createElement("option");
+            option.value = driver.id;
+            option.textContent = `${driver.name} · ${formatCurrency(driver.hourlyRate)} / h`;
+            option.selected = index === 0;
+            elements.driverSelect.appendChild(option);
+        });
+    }
+
+    function renderPackageTypeOptions() {
+        elements.packageType.innerHTML = "";
+
+        state.packageTypes.forEach(function (packageType, index) {
+            const option = document.createElement("option");
+            option.value = packageType.type;
+            option.textContent = packageType.volumeM3
+                ? `${packageType.type} · ${formatNumber(packageType.volumeM3, 2)} m³ · ${formatNumber(packageType.baseWeightKg, 1)} kg`
+                : packageType.type;
+            option.selected = index === 0;
+            elements.packageType.appendChild(option);
+        });
+    }
+
+    function applySelectedPackageType() {
+        const selectedType = state.packageTypes.find(function (packageType) {
+            return packageType.type === elements.packageType.value;
+        });
+
+        if (!selectedType || selectedType.type === "Manuelle Eingabe") {
+            refreshCostPlanFromCurrentRoute();
+            return;
+        }
+
+        const sideCm = Math.max(10, Math.round(Math.cbrt(selectedType.volumeM3) * 100));
+        elements.packageLength.value = String(sideCm);
+        elements.packageWidth.value = String(sideCm);
+        elements.packageHeight.value = String(sideCm);
+        elements.packageWeight.value = String(selectedType.baseWeightKg);
+        refreshCostPlanFromCurrentRoute();
+    }
+
+    function setCsvStatus(message) {
+        if (elements.csvStatus) {
+            elements.csvStatus.textContent = message;
+        }
     }
 
     function handleInputKeydown(event) {
@@ -444,6 +898,7 @@
             state.ziel = ziel;
 
             await drawRoute(start, ziel);
+            closeRouteDialog();
         } catch (error) {
             showRouteError("Die Route konnte nicht berechnet werden. Bitte versuche es erneut.");
         } finally {
@@ -535,9 +990,9 @@
     function drawRouteLine(coordinates, isFallback) {
         const shadowLine = L.polyline(coordinates, {
             className: "route-line-shadow",
-            color: "#07111a",
-            opacity: 0.72,
-            weight: 13,
+            color: "#ffffff",
+            opacity: 0.86,
+            weight: 12,
             lineCap: "round",
             lineJoin: "round",
             interactive: false
@@ -545,14 +1000,16 @@
 
         const routeLine = L.polyline(coordinates, {
             className: isFallback ? "route-line route-line-fallback" : "route-line",
-            color: isFallback ? "#f59e0b" : "#2dd4bf",
-            dashArray: isFallback ? "10 12" : null,
+            color: "#ef4444",
+            dashArray: isFallback ? "12 10" : null,
             opacity: 1,
-            weight: 6,
+            weight: 7,
             lineCap: "round",
             lineJoin: "round"
         }).addTo(state.map);
 
+        shadowLine.bringToFront();
+        routeLine.bringToFront();
         state.routeLayers = [shadowLine, routeLine];
     }
 
@@ -633,6 +1090,7 @@
         elements.duration.textContent = formatDuration(durationMinutes);
         elements.routeInfo.textContent = `${state.currentResult.routeInfo} ${costPlan.priority.routeReason}`;
         renderCostPlan(costPlan);
+        saveTripToCsv(costPlan);
         clearErrors();
     }
 
@@ -652,11 +1110,13 @@
         elements.duration.textContent = "Nicht verfügbar";
         elements.routeInfo.textContent = `${state.currentResult.routeInfo} ${costPlan.priority.routeReason}`;
         renderCostPlan(costPlan);
+        saveTripToCsv(costPlan);
     }
 
     // Planungslogik für den Schul-Prototyp: Paket, Fahrzeugdaten, Strecke und BWL-Kosten.
     function calculateCostPlan(distanceKm, durationSeconds) {
         const selectedTruck = getSelectedTruck();
+        const selectedDriver = getSelectedDriver();
         const priority = getSelectedPriority();
         const dieselPrice = getDieselPrice();
         const packageData = getPackageData();
@@ -665,12 +1125,13 @@
         const consumedLiters = distanceKm / 100 * plannedTruck.consumption;
         const fuelCost = consumedLiters * dieselPrice * priority.factor;
         const durationHours = Math.max(durationSeconds / 3600, distanceKm / 70);
-        const bwlCosts = calculateBwlCosts(plannedTruck, durationHours);
+        const bwlCosts = calculateBwlCosts(plannedTruck, selectedDriver, durationHours);
         const totalCost = fuelCost + bwlCosts.total;
         const benefits = calculateBenefits(priority, plannedTruck, durationHours, totalCost);
 
         return {
             selectedTruck,
+            selectedDriver,
             plannedTruck,
             priority,
             dieselPrice,
@@ -702,13 +1163,69 @@
     }
 
     function renderSummary(plan) {
-        const start = elements.startInput.value.trim() || "Start";
-        const ziel = elements.zielInput.value.trim() || "Ziel";
+        const start = formatCompactAddressLabel(elements.startInput.value) || "Start";
+        const ziel = formatCompactAddressLabel(elements.zielInput.value) || "Ziel";
 
         elements.summaryRoute.textContent = `${start} nach ${ziel}`;
         elements.summaryPackage.textContent = `${plan.packageData.quantity} Paket(e), ${formatNumber(plan.packageData.totalWeightKg, 1)} kg`;
         elements.summaryVehicle.textContent = plan.plannedTruck.name;
+        elements.summaryDriver.textContent = plan.selectedDriver ? plan.selectedDriver.name : "-";
         elements.summaryCost.textContent = formatCurrency(plan.totalCost);
+    }
+
+    function formatCompactAddressLabel(value) {
+        const trimmedValue = value.trim();
+
+        if (!trimmedValue) {
+            return "";
+        }
+
+        const parts = trimmedValue.split(",").map(function (part) {
+            return part.trim();
+        }).filter(Boolean);
+        const compactLabel = parts[0] || trimmedValue;
+
+        return shortenText(compactLabel, 32);
+    }
+
+    function shortenText(text, maxLength) {
+        if (text.length <= maxLength) {
+            return text;
+        }
+
+        return `${text.slice(0, maxLength - 3).trim()}...`;
+    }
+
+    async function saveTripToCsv(plan) {
+        if (!state.csvWriteEnabled) {
+            setCsvStatus("CSV gelesen. Fahrten speichern funktioniert erst mit dem lokalen server.py.");
+            return;
+        }
+
+        try {
+            const response = await fetch("api/fahrten", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    datum: new Date().toISOString().slice(0, 10),
+                    fahrzeugId: plan.plannedTruck.id,
+                    fahrerId: plan.selectedDriver ? plan.selectedDriver.id : "",
+                    startort: elements.startInput.value.trim(),
+                    zielort: elements.zielInput.value.trim(),
+                    kostenGesamtEur: formatNumber(plan.totalCost, 2)
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error("Fahrt konnte nicht gespeichert werden.");
+            }
+
+            setCsvStatus("Fahrt wurde in CSV/Fahrtenverlauf.csv gespeichert.");
+        } catch (error) {
+            setCsvStatus("Fahrt konnte nicht in die CSV-Datei geschrieben werden.");
+        }
     }
 
     function refreshCostPlanFromCurrentRoute() {
@@ -814,18 +1331,21 @@
         return vehicle.consumption + usagePenalty - vehicle.speedScore * 0.2;
     }
 
-    function calculateBwlCosts(vehicle, durationHours) {
+    function calculateBwlCosts(vehicle, driver, durationHours) {
         const acquisitionShare = vehicle.purchaseCost / vehicle.depreciationYears / vehicle.annualTrips;
         const maintenanceShare = vehicle.maintenancePerYear / vehicle.annualTrips;
         const trainingShare = vehicle.trainingCost / vehicle.trainingYears / vehicle.annualTrips;
-        const personnelCost = durationHours * vehicle.personnelHourlyRate;
+        const insuranceShare = Number(vehicle.insurancePerDay) || 0;
+        const hourlyRate = driver ? driver.hourlyRate : vehicle.personnelHourlyRate;
+        const personnelCost = durationHours * hourlyRate;
 
         return {
             acquisitionShare,
             maintenanceShare,
             trainingShare,
+            insuranceShare,
             personnelCost,
-            total: acquisitionShare + maintenanceShare + trainingShare + personnelCost
+            total: acquisitionShare + maintenanceShare + trainingShare + insuranceShare + personnelCost
         };
     }
 
@@ -853,6 +1373,7 @@
             ["Anschaffungskosten", plan.bwlCosts.acquisitionShare],
             ["Wartungskosten", plan.bwlCosts.maintenanceShare],
             ["Schulungskosten", plan.bwlCosts.trainingShare],
+            ["Versicherungskosten", plan.bwlCosts.insuranceShare],
             ["Personalkosten", plan.bwlCosts.personnelCost]
         ].forEach(function (item) {
             elements.bwlCosts.appendChild(createBreakdownItem(item[0], formatCurrency(item[1])));
@@ -940,6 +1461,7 @@
         elements.summaryRoute.textContent = "-";
         elements.summaryPackage.textContent = "-";
         elements.summaryVehicle.textContent = "-";
+        elements.summaryDriver.textContent = "-";
         elements.summaryCost.textContent = "-";
         elements.fuelLiters.textContent = "-";
         elements.fuelInfo.textContent = "";
@@ -954,6 +1476,7 @@
         closeSuggestions();
         removeRouteLayers();
         updateSelectedTruckDetails();
+        setWizardStep(0);
 
         state.start = null;
         state.ziel = null;
@@ -986,6 +1509,13 @@
         return VEHICLES.find(function (truck) {
             return truck.id === selectedTruckId;
         }) || VEHICLES[0];
+    }
+
+    function getSelectedDriver() {
+        const selectedDriverId = elements.driverSelect.value;
+        return state.drivers.find(function (driver) {
+            return driver.id === selectedDriverId;
+        }) || state.drivers[0] || null;
     }
 
     function getSelectedPriority() {
