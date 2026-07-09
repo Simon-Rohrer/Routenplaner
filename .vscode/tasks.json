@@ -4,7 +4,7 @@
     {
       "label": "Lokalen Server starten",
       "type": "shell",
-      "command": "python3",
+      "command": "py",
       "args": [
         "server.py"
       ],
@@ -28,6 +28,30 @@
         "panel": "dedicated",
         "clear": true
       }
+    },
+    {
+      "label": "Standardbrowser öffnen",
+      "type": "shell",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "start",
+        "",
+        "http://127.0.0.1:5500/index.html"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never"
+      }
+    },
+    {
+      "label": "Projekt lokal starten",
+      "dependsOn": [
+        "Lokalen Server starten",
+        "Standardbrowser öffnen"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
     }
   ]
 }

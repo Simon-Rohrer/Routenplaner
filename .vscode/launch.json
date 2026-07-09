@@ -2,12 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Logistikplaner lokal starten",
-      "type": "chrome",
+      "name": "Projekt lokal starten",
+      "type": "node",
       "request": "launch",
-      "url": "http://localhost:5500/index.html",
-      "webRoot": "${workspaceFolder}",
-      "preLaunchTask": "Lokalen Server starten"
+      "program": "${workspaceFolder}/.vscode/start-server-and-browser.js",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
     }
   ]
 }
